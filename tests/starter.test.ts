@@ -30,13 +30,13 @@ views:
 describe("starter", () => {
   const s = { ...DEFAULT_SETTINGS, sourcesFolder: "Notes/Sources", defaultFolder: "Notes/Dots" };
   it("kind frontmatter", () => {
-    expect(starterKindFrontmatter("Book", s)).toEqual({ is_source: true, folder: "Notes/Sources/Books", status_options: ["to read", "reading", "finished"], default_status: "to read", fields: ["author"], title: "Book" });
+    expect(starterKindFrontmatter("Book", s)).toEqual({ is_source: true, folder: "Notes/Sources/Books", fields: ["status", "author"], status_options: ["to read", "reading", "finished"], status_default: "to read", title: "Book" });
     expect(starterKindFrontmatter("Collection", s)).toEqual({ folder: "Notes/Dots", title: "Collection" });
     expect(starterKindFrontmatter("Concept", s)).toEqual({ title: "Concept" });
-    expect(starterKindFrontmatter("Idea", s)).toMatchObject({ default_status: "backlog" });
+    expect(starterKindFrontmatter("Idea", s)).toEqual({ fields: ["status"], status_options: ["backlog", "selected", "working", "completed", "graveyard"], status_default: "backlog", title: "Idea" });
     expect(starterKindFrontmatter("Idea", s)).not.toHaveProperty("effort_status");
     expect(starterKindFrontmatter("Tool", s)).toEqual({ is_source: true, folder: "Notes/Sources/Tools", title: "Tool" });
-    expect(starterKindFrontmatter("Article", s)).toEqual({ is_source: true, folder: "Notes/Sources/Articles", status_options: ["to read", "reading", "finished"], default_status: "to read", title: "Article" });
+    expect(starterKindFrontmatter("Article", s)).toEqual({ is_source: true, folder: "Notes/Sources/Articles", fields: ["status"], status_options: ["to read", "reading", "finished"], status_default: "to read", title: "Article" });
     expect(starterKindFrontmatter("Method", s)).toEqual({ is_source: true, folder: "Notes/Sources/Methods", title: "Method" });
   });
   it("map kind", () => {
@@ -48,9 +48,12 @@ describe("starter", () => {
     expect(kindNoteBody(s)).toContain("blank = Notes/Dots");
   });
   it("kind note body mentions every key", () => {
-    for (const k of ["folder", "is_source", "default_status", "status_options", "default_up", "fields", "template"]) {
+    for (const k of ["folder", "is_source", "default_up", "fields", "template", "title_template"]) {
       expect(kindNoteBody(s)).toContain(`${k}:`);
     }
+    expect(kindNoteBody(s)).toContain("<field>_options:");
+    expect(kindNoteBody(s)).toContain("<field>_default:");
+    expect(kindNoteBody(s)).not.toContain("default_status");
   });
   it("mapBody", () => {
     expect(mapBody('My "Atlas"')).toContain(`- 'file.inFolder("My \\"Atlas\\"")'`);

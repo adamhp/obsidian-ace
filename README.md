@@ -23,10 +23,13 @@ A kind exists if `<Kinds folder>/<name>.md` exists (default `Atlas/Kinds/<name>.
 |---|---|---|
 | `folder` | where notes of this kind are filed | `Atlas/Dots` |
 | `is_source` | asks for a link and writes `source` | false |
-| `default_status` | status written if the note has none | none |
-| `status_options` | statuses offered; empty means don't ask | none |
 | `default_up` | name of the Map suggested first in the picker | none |
-| `fields` | extra blank properties added on create and set kind, e.g. `[author]` | none |
+| `fields` | properties asked for when you create a note of this kind or set its kind, e.g. `[status, author]` | none |
+| `<field>_options` | list of choices for that field, e.g. `status_options` | none |
+| `<field>_default` | value filled in or listed first for that field, e.g. `status_default` | none |
+| `title_template` | builds the note name from fields, e.g. `{{first_name}} {{last_name}}` | none |
+
+How each field is asked for comes from its Obsidian property type (`.obsidian/types.json`).
 | `template` | path or wikilink to a plain markdown file whose body is copied into new notes of this kind | none |
 
 ## Settings
@@ -53,6 +56,8 @@ The **Create starter kinds** button adds the standard Kind notes and the Map kin
 ## Migrating from the hard-coded version
 
 Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
+
+Kind notes no longer use `default_status` and `status_options` as built-in keys. For each kind that has them (Article, Book, Idea, List, Library, Movie, Product), add `status` to `fields` (first) and rename `default_status` to `status_default`. `status_options` keeps its name.
 
 ## Filing rule
 

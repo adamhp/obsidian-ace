@@ -61,7 +61,7 @@ const kindBody = stripTemplater(tplKind.body).replace(/^\n+/, "");
 const tplMap = fs.readFileSync(`${REAL}/System/Templates/Template - Map.md`, "utf8");
 const dotsBlock = tplMap.slice(tplMap.indexOf("## Dots")).trimEnd() + "\n";
 
-const KEEP = ["is_source", "folder", "default_status", "status_options", "default_up", "title"];
+const KEEP = ["is_source", "folder", "default_status", "status_options", "default_up", "fields", "title_template", "title"];
 const kindsDir = `${REAL}/Atlas/Kinds`;
 for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()) {
 	const name = f.replace(/\.md$/, "");
@@ -78,6 +78,13 @@ for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()
 	put(`Atlas/Kinds/${f}`, out, kindBody);
 }
 put("System/Templates/Map.md", null, dotsBlock);
+// Obsidian property types for the dev vault (only if absent; put() would also honour --force).
+const typesPath = path.join(vault, ".obsidian/types.json");
+if (!fs.existsSync(typesPath)) {
+	fs.mkdirSync(path.dirname(typesPath), { recursive: true });
+	fs.writeFileSync(typesPath, JSON.stringify({ types: { last_contacted: "date" } }, null, 2) + "\n");
+	written++;
+}
 
 // ---- Fictional notes ----
 const L = (n) => `[[${n}]]`;
@@ -175,15 +182,17 @@ Try each command from the command palette (Ctrl+P, "ACE Actions: ..."). Tick the
 ## New note / New Map
 - [ ] Run New note, pick Concept, type "Trial note", then pick a Map (or "(no Map)"). Expect Atlas/Dots/Trial note.md to open with kind [[Concept]].
 - [ ] Run New note, pick Drink, type "Old Fashioned". Expect a refusal in the name prompt because the name clashes (Atlas/Dots/Old Fashioned.md).
+- [ ] Run New note, pick Person. Expect questions for first name, last name and last contacted (a date picker). Answer "Ada", "Lovelace", a date. Expect Ada Lovelace.md with last_contacted: <date>. A note by that name is already seeded in Atlas/Dots, so expect a clash refusal; answer "Ada", "Byron" instead to see the file made.
 - [ ] Run New Map, type "Hobbies", then pick a Map or "(no Map)". Expect Atlas/Maps/Hobbies.md with kind [[Map]] and a Dots base.
 
 ## Set kind
-Each run asks: kind, then Map (pick one or "(no Map)"), then status (if the kind has options), then a link (source kinds without a source).
+Each run asks: kind, then Map (pick one or "(no Map)"), then the kind's fields (status, author, ...; a field already set on the note is not asked), then a link (source kinds without a source).
 - [ ] Open [[Inbox/Cool article]] then Set kind then Article. Expect the link pre-filled from the URL in the text, status choices led by "to read", and the note moved to Atlas/Sources/Articles.
 - [ ] Open [[Inbox/Raw thought]] then Set kind then Concept. Expect kind [[Concept]] and a move to Atlas/Dots.
 - [ ] Open [[Inbox/Scalar up]] then Set kind then Concept, pick "(no Map)". Expect up to stay as a one-item list ["[[Software]]"].
 - [ ] Open [[Inbox/Old Fashioned]] then Set kind then Drink. Expect kind set but the file stays in Inbox, with a notice "not moved: Atlas/Dots/Old Fashioned.md already exists".
 - [ ] Open [[Inbox/Book idea]] then Set kind then Book. Expect an empty author field and a move to Atlas/Sources/Books.
+- [ ] Open a note that already has status set, then Set kind then Book. Expect status not to be asked again.
 - [ ] Open [[Loose note]] then Set kind then Person. Expect it to be filed into the Person kind folder (Atlas/Dots unless the kind says otherwise).
 
 ## Add to Map

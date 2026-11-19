@@ -10,18 +10,19 @@ export function starterKindFrontmatter(name: string, s: AceSettings): Record<str
   let fm: Record<string, unknown>;
   switch (name) {
     case "Article":
-      fm = { ...src("Articles"), status_options: [...READ_STATUSES], default_status: "to read" };
+      fm = { ...src("Articles"), fields: ["status"], status_options: [...READ_STATUSES], status_default: "to read" };
       break;
     case "Book":
-      fm = { ...src("Books"), status_options: [...READ_STATUSES], default_status: "to read", fields: ["author"] };
+      fm = { ...src("Books"), fields: ["status", "author"], status_options: [...READ_STATUSES], status_default: "to read" };
       break;
     case "Collection":
       fm = { folder: s.defaultFolder };
       break;
     case "Idea":
       fm = {
+        fields: ["status"],
         status_options: ["backlog", "selected", "working", "completed", "graveyard"],
-        default_status: "backlog",
+        status_default: "backlog",
       };
       break;
     case "Method":
@@ -62,10 +63,11 @@ export function kindNoteBody(s: AceSettings): string {
 Kind note keys (frontmatter above). All are optional.
 folder: where new notes of this kind are filed (blank = ${s.defaultFolder})
 is_source: true to ask for a link and write "source"
-status_options: statuses offered (empty = don't ask)
-default_status: status written if the note has none
 default_up: name of the Map to suggest first when picking a Map
-fields: extra blank properties added when creating a note or setting its kind
+fields: properties asked for when you create a note of this kind (or set its kind)
+<field>_options: list of choices for that field
+<field>_default: value filled in or listed first for that field
+title_template: builds the note name from fields, e.g. {{first_name}} {{last_name}}
 template: path or wikilink to a plain markdown file whose body is copied into new notes of this kind
 %%
 
