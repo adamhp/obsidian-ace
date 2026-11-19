@@ -10,11 +10,29 @@ const DEFAULT_VAULT = "/mnt/c/Users/adamp/Documents/ACE Dev Vault";
 const force = process.argv.includes("--force");
 
 const vault = path.resolve(process.env.ACE_VAULT || DEFAULT_VAULT);
+if (!fs.existsSync(REAL)) {
+	console.error(`Real vault not found at "${REAL}"; cannot read Kind notes or templates.`);
+	process.exit(1);
+}
 const within = (p, root) => {
-	const a = p.toLowerCase(), b = path.resolve(root).toLowerCase();
+	const a = p.toLowerCase(), b = root.toLowerCase();
 	return a === b || a.startsWith(b + "/");
 };
-if (within(vault, REAL) || BLOCKED.some((b) => within(vault, b))) {
+// Resolve symlinks of the deepest existing ancestor, then re-append the rest.
+const real = (p) => {
+	let cur = path.resolve(p);
+	const rest = [];
+	while (!fs.existsSync(cur)) {
+		const parent = path.dirname(cur);
+		if (parent === cur) break;
+		rest.unshift(path.basename(cur));
+		cur = parent;
+	}
+	return path.join(fs.realpathSync(cur), ...rest);
+};
+const vaultReal = real(vault);
+const guarded = [REAL, ...BLOCKED].flatMap((g) => [path.resolve(g), real(g)]);
+if (guarded.some((g) => within(vault, g) || within(vaultReal, g))) {
 	console.error(`Refusing to seed "${vault}": it is the real vault or a protected path.`);
 	process.exit(1);
 }
