@@ -173,31 +173,34 @@ add("Home.md", null, `# ACE Dev Vault
 Try each command from the command palette (Ctrl+P, "ACE Actions: ..."). Tick the box when it behaves as expected.
 
 ## New note / New Map
-- [ ] Run New note, type "Trial note". Expect Inbox/Trial note.md to open.
-- [ ] Run New note, type "Old Fashioned". Expect a refusal because the name clashes (Atlas/Dots/Old Fashioned.md).
-- [ ] Run New Map, type "Hobbies". Expect Atlas/Maps/Hobbies.md with kind [[Map]] and a Dots base.
+- [ ] Run New note, pick Concept, type "Trial note", then pick a Map (or "(no Map)"). Expect Atlas/Dots/Trial note.md to open with kind [[Concept]].
+- [ ] Run New note, pick Drink, type "Old Fashioned". Expect a refusal in the name prompt because the name clashes (Atlas/Dots/Old Fashioned.md).
+- [ ] Run New Map, type "Hobbies", then pick a Map or "(no Map)". Expect Atlas/Maps/Hobbies.md with kind [[Map]] and a Dots base.
 
 ## Set kind
-- [ ] Open [[Inbox/Cool article]] then Set kind then Article. Expect source pre-filled from the URL, status "to read", and the note moved to Atlas/Sources/Articles.
+Each run asks: kind, then Map (pick one or "(no Map)"), then status (if the kind has options), then a link (source kinds without a source).
+- [ ] Open [[Inbox/Cool article]] then Set kind then Article. Expect the link pre-filled from the URL in the text, status choices led by "to read", and the note moved to Atlas/Sources/Articles.
 - [ ] Open [[Inbox/Raw thought]] then Set kind then Concept. Expect kind [[Concept]] and a move to Atlas/Dots.
-- [ ] Open [[Inbox/Scalar up]] then Set kind then Concept. Expect up turned into a list.
-- [ ] Open [[Inbox/Old Fashioned]] then Set kind then Drink. Expect no overwrite; the move is refused or skipped because Atlas/Dots/Old Fashioned.md exists.
-- [ ] Open [[Inbox/Book idea]] then Set kind then Book. Expect an author field and a move to Atlas/Sources/Books.
-- [ ] Open [[Loose note]] then Set kind then Person. Expect it to be filed into Atlas/Dots.
+- [ ] Open [[Inbox/Scalar up]] then Set kind then Concept, pick "(no Map)". Expect up to stay as a one-item list ["[[Software]]"].
+- [ ] Open [[Inbox/Old Fashioned]] then Set kind then Drink. Expect kind set but the file stays in Inbox, with a notice "not moved: Atlas/Dots/Old Fashioned.md already exists".
+- [ ] Open [[Inbox/Book idea]] then Set kind then Book. Expect an empty author field and a move to Atlas/Sources/Books.
+- [ ] Open [[Loose note]] then Set kind then Person. Expect it to be filed into the Person kind folder (Atlas/Dots unless the kind says otherwise).
 
 ## Add to Map
 - [ ] Open [[Inbox/Meeting notes]] then Add to Map then Software. Expect up: ["[[Software]]"].
-- [ ] Open [[Idempotency]] then Add to Map then Reading List. Expect Reading List appended to up, no duplicate.
+- [ ] Open [[Idempotency]] (up is already [[Software]]) then Add to Map then Software. Expect a notice "already on Software" and up unchanged (no duplicate).
+- [ ] Open [[Idempotency]] then Add to Map then Reading List. Expect [[Reading List]] appended after [[Software]].
 
 ## File by kind
 - [ ] Open [[Atlas/Sources/Misfiled Book]] then File by kind. Expect it moved to Atlas/Sources/Books.
-- [ ] Open [[Efforts/Garden Planner/Soil Types]] then File by kind. Expect it stays in Efforts/Garden Planner.
+- [ ] Open [[Efforts/Garden Planner/Soil Types]] then File by kind. Expect a notice that it stays in Efforts/Garden Planner.
 
 ## Make effort
-- [ ] Open [[Podcast about local history]] then Make effort then on. Expect a new Effort in Efforts with from set, and the Idea gets an effort link and status working.
+- [ ] Open [[Podcast about local history]] then Make effort then on, accept the name prompt ("... (effort)"). Expect a new Effort in Efforts with from set, and the Idea gets an effort link and status working.
 - [ ] Open [[Inbox/Movie to see]] then Make effort then simmering. Expect intensity set and the note moved to Efforts.
 
 ## New effort
+Asks name, then intensity, then shape.
 - [ ] Run New effort, name "Learn Portuguese", sleeping, Single note. Expect Efforts/Learn Portuguese.md.
 - [ ] Run New effort, name "Home Studio", on, Folder. Expect Efforts/Home Studio/Home Studio.md.
 

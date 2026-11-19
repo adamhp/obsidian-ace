@@ -30,8 +30,17 @@ function strList(v: unknown): string[] {
   return v.map((x) => str(x)).filter((x): x is string => x !== null);
 }
 
+// YAML parses an unquoted `[[X]]` as a nested array [["X"]]; read it as the link [[X]].
+function unnest(item: unknown): unknown {
+  if (Array.isArray(item) && item.length === 1 && typeof item[0] === "string") {
+    const s = item[0].trim();
+    return s === "" ? item : `[[${s}]]`;
+  }
+  return item;
+}
+
 export function linkTarget(value: unknown): string | null {
-  const first = Array.isArray(value) ? value[0] : value;
+  const first = unnest(Array.isArray(value) ? value[0] : value);
   let s = str(first);
   if (s === null) return null;
   const m = /^\[\[(.*)\]\]$/.exec(s);
@@ -41,12 +50,19 @@ export function linkTarget(value: unknown): string | null {
   return s === "" ? null : s;
 }
 
-export function linkList(value: unknown): string[] {
+// Items it cannot read are kept unchanged, never dropped.
+export function linkList(value: unknown): unknown[] {
   const items = Array.isArray(value) ? value : [value];
-  const out: string[] = [];
-  for (const item of items) {
-    const s = str(item);
-    if (s === null) continue;
+  const out: unknown[] = [];
+  for (const raw of items) {
+    if (raw === null || raw === undefined) continue;
+    const item = unnest(raw);
+    if (typeof item !== "string") {
+      out.push(raw);
+      continue;
+    }
+    const s = item.trim();
+    if (s === "") continue;
     if (/^\[\[.*\]\]$/.test(s)) out.push(s);
     else {
       const t = linkTarget(s);
@@ -56,9 +72,9 @@ export function linkList(value: unknown): string[] {
   return out;
 }
 
-export function addLink(value: unknown, target: string): string[] {
+export function addLink(value: unknown, target: string): unknown[] {
   const list = linkList(value);
-  if (list.some((l) => linkTarget(l)?.toLowerCase() === target.toLowerCase())) return list;
+  if (list.some((l) => typeof l === "string" && linkTarget(l)?.toLowerCase() === target.toLowerCase())) return list;
   return [...list, `[[${target}]]`];
 }
 
@@ -74,7 +90,7 @@ function templatePath(v: unknown): string | null {
 
 export function parseKindConfig(name: string, fm: Record<string, unknown> | undefined): KindConfig {
   const f = fm ?? {};
-  const folder = (str(f.folder) ?? "").replace(/\/+$/, "");
+  const folder = (str(f.folder) ?? "").replace(/^\/+/, "").replace(/\/+$/, "");
   const src = f.is_source;
   return {
     name,
@@ -132,6 +148,8 @@ export function logStamp(d: Date): string {
 export interface StatusChoice {
   label: string;
   value: string | null;
+  // true for "(keep X)": the note's existing status stays; false/absent for "(no status)".
+  keep?: boolean;
 }
 
 // value null = write no status (keeps any existing one).
@@ -144,10 +162,24 @@ export function statusChoices(
   const none: StatusChoice = { label: "(no status)", value: null };
   const set = (s: string): StatusChoice => ({ label: s, value: s });
   if (cur !== "" && !options.includes(cur)) {
-    return [{ label: `(keep ${cur})`, value: null }, ...options.map(set), none];
+    return [{ label: `(keep ${cur})`, value: null, keep: true }, ...options.map(set), none];
   }
   const first = cur !== "" ? cur : defaultStatus;
   const opts = withFirst(options, first);
   if (first !== null && opts[0] === first) return [...opts.map(set), none];
   return [none, ...opts.map(set)];
+}
+
+// Status to write for a new or re-kinded note. The kind default applies only when
+// no status question was asked; an explicit choice (including "(no status)") wins.
+export function resolveStatus(
+  asked: boolean,
+  chosen: string | null,
+  defaultStatus: string | null,
+  existing: unknown = null,
+): string | null {
+  if (chosen !== null) return chosen;
+  if (asked) return null;
+  const has = typeof existing === "string" ? existing.trim() !== "" : existing != null;
+  return has ? null : defaultStatus;
 }

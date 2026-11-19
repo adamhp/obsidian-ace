@@ -1,7 +1,7 @@
 import { Notice, TFile } from "obsidian";
 import { Ace } from "../vault";
 import { ask, pick } from "../ui";
-import { KindConfig, cleanName, isTaken, statusChoices as statusChoicesOf, withFirst } from "../rules";
+import { KindConfig, cleanName, isTaken, resolveStatus, statusChoices as statusChoicesOf, withFirst } from "../rules";
 
 interface Choice<T> {
 	label: string;
@@ -19,6 +19,7 @@ async function choose<T>(
 export interface KindDetails {
 	map: string | null;
 	status: string | null;
+	statusAsked: boolean;
 	url: string | null;
 }
 
@@ -42,12 +43,14 @@ export async function askKindDetails(
 
 	// Status
 	let status: string | null = null;
+	let statusAsked = false;
 	if (kind.statusOptions.length > 0) {
 		const cur = typeof current.status === "string" ? current.status : null;
 		const statusChoices = statusChoicesOf(kind.statusOptions, cur, kind.defaultStatus);
 		const sp = await choose(ace, statusChoices, `Status for "${noteName}"`);
 		if (sp === null) return null;
 		status = sp.value;
+		statusAsked = true;
 	}
 
 	// Link
@@ -60,7 +63,7 @@ export async function askKindDetails(
 		url = a.trim() === "" ? null : a.trim();
 	}
 
-	return { map: mapPick.value, status, url };
+	return { map: mapPick.value, status, statusAsked, url };
 }
 
 export function askNewName(ace: Ace, what: string, initial: string): Promise<string | null> {
@@ -83,7 +86,8 @@ export async function createOfKind(ace: Ace, kind: KindConfig): Promise<void> {
 		up: d.map ? [`[[${d.map}]]`] : [],
 	};
 	for (const f of kind.fields) props[f] = null;
-	if (d.status) props.status = d.status;
+	const status = resolveStatus(d.statusAsked, d.status, kind.defaultStatus);
+	if (status) props.status = status;
 	if (kind.isSource) props.source = d.url;
 	const file: TFile = await ace.createNote(
 		kind.folder,

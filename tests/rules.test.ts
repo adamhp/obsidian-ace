@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
-  isUnder, shouldMove, firstUrl, withFirst, ideaStatus, logStamp,
+  isUnder, shouldMove, resolveStatus, firstUrl, withFirst, ideaStatus, logStamp,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
@@ -141,4 +141,52 @@ describe("statusChoices", () => {
     expect(labels(c)).toEqual(["(keep weird)", "a", "b", "(no status)"]);
     expect(c[0].value).toBeNull();
   });
+});
+
+describe("nested YAML links", () => {
+  it("linkTarget reads nested one-element array", () => {
+    expect(linkTarget([["Book"]])).toBe("Book");
+    expect(linkTarget([["Book|b"]])).toBe("Book");
+  });
+  it("linkList reads nested up", () => {
+    expect(linkList([["Software"]])).toEqual(["[[Software]]"]);
+    expect(linkList([["Software"], "[[Ideas|i]]"])).toEqual(["[[Software]]", "[[Ideas|i]]"]);
+  });
+  it("linkList keeps unknown items unchanged", () => {
+    const odd = { a: 1 };
+    const multi = ["x", "y"];
+    expect(linkList(["[[A]]", odd, multi])).toEqual(["[[A]]", odd, multi]);
+  });
+  it("mixed alias and plain", () => {
+    expect(linkList(["[[A|a]]", "B", ["C"]])).toEqual(["[[A|a]]", "[[B]]", "[[C]]"]);
+  });
+  it("addLink keeps unknown items and dedupes nested", () => {
+    const odd = { a: 1 };
+    expect(addLink([odd, ["Software"]], "Software")).toEqual([odd, "[[Software]]"]);
+    expect(addLink([odd], "B")).toEqual([odd, "[[B]]"]);
+  });
+});
+
+describe("parseKindConfig folder slashes", () => {
+  it("strips leading and trailing slashes", () => {
+    expect(parseKindConfig("A", { folder: "/Atlas/Dots/" }).folder).toBe("Atlas/Dots");
+    expect(parseKindConfig("A", { folder: "/Atlas/Dots" }).folder).toBe("Atlas/Dots");
+  });
+});
+
+describe("status keep vs none", () => {
+  it("keep flag only on keep choice", () => {
+    const c = statusChoices(["a"], "weird", null);
+    expect(c[0].keep).toBe(true);
+    expect(c[c.length - 1].keep).toBeFalsy();
+  });
+});
+
+describe("resolveStatus", () => {
+  it("explicit choice wins", () => expect(resolveStatus(true, "b", "a")).toBe("b"));
+  it("(no status) after question: no default", () => expect(resolveStatus(true, null, "a")).toBeNull());
+  it("no question: default", () => expect(resolveStatus(false, null, "a")).toBe("a"));
+  it("no question: existing status kept", () => expect(resolveStatus(false, null, "a", "x")).toBeNull());
+  it("no question, empty existing: default", () => expect(resolveStatus(false, null, "a", "")).toBe("a"));
+  it("no default: null", () => expect(resolveStatus(false, null, null)).toBeNull());
 });
