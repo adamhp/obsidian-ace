@@ -1,16 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
-  isUnder, shouldMove, resolveStatus, firstUrl, withFirst, ideaStatus, logStamp,
+  isUnder, shouldMove, resolveStatus, firstUrl, withFirst,
+  normalizeSettings, DEFAULT_SETTINGS, parseIntensities, effortStatus, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
   it("parses full config", () => {
     expect(parseKindConfig("Book", { is_source: "true", status_options: ["to read","reading","finished"], default_status: "to read", folder: "Atlas/Sources/Books/", fields: ["author"] }))
-      .toEqual({ name: "Book", folder: "Atlas/Sources/Books", isSource: true, defaultStatus: "to read", statusOptions: ["to read","reading","finished"], defaultUp: null, fields: ["author"], template: null });
+      .toEqual({ name: "Book", folder: "Atlas/Sources/Books", isSource: true, defaultStatus: "to read", statusOptions: ["to read","reading","finished"], defaultUp: null, fields: ["author"], template: null, effortStatus: null, effortStatusActive: null });
   });
   it("defaults", () => {
-    expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultStatus: null, statusOptions: [], defaultUp: null, fields: [], template: null });
+    expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultStatus: null, statusOptions: [], defaultUp: null, fields: [], template: null, effortStatus: null, effortStatusActive: null });
   });
   it("handles empty/null and links", () => {
     const c = parseKindConfig("Person", { default_up: "[[People]]", folder: "", status_options: null });
@@ -109,21 +110,6 @@ describe("withFirst", () => {
   });
 });
 
-describe("ideaStatus", () => {
-  it("maps", () => {
-    expect(ideaStatus("on")).toBe("working");
-    expect(ideaStatus("ongoing")).toBe("selected");
-    expect(ideaStatus("simmering")).toBe("selected");
-    expect(ideaStatus("sleeping")).toBe("selected");
-  });
-});
-
-describe("logStamp", () => {
-  it("formats local", () => {
-    expect(logStamp(new Date(2026, 10, 19, 8, 5))).toBe("[[2026-11-19]] 08:05: ");
-  });
-});
-
 import { statusChoices } from "../src/rules";
 describe("statusChoices", () => {
   const labels = (c: { label: string }[]) => c.map((x) => x.label);
@@ -189,4 +175,34 @@ describe("resolveStatus", () => {
   it("no question: existing status kept", () => expect(resolveStatus(false, null, "a", "x")).toBeNull());
   it("no question, empty existing: default", () => expect(resolveStatus(false, null, "a", "")).toBe("a"));
   it("no default: null", () => expect(resolveStatus(false, null, null)).toBeNull());
+});
+
+describe("settings", () => {
+  it("normalizeSettings", () => {
+    expect(normalizeSettings(undefined)).toEqual(DEFAULT_SETTINGS);
+    expect(normalizeSettings({ kindsFolder: "/Notes/Kinds/", effortsFolder: "", atlasFolder: 7, intensities: "on, , ongoing, bad:one, x[y]" }))
+      .toMatchObject({ kindsFolder: "Notes/Kinds", effortsFolder: "Efforts", atlasFolder: "Atlas", intensities: ["on", "ongoing"] });
+    expect(normalizeSettings({ intensities: [] }).intensities).toEqual(["on", "ongoing", "simmering", "sleeping"]);
+    expect(normalizeSettings({ newEffortText: "", logFormat: "" })).toMatchObject({ newEffortText: "", logFormat: "[[{{date}}]] {{time}}: " });
+  });
+  it("parseIntensities", () => {
+    expect(parseIntensities(" a ,b,,c|d ")).toEqual(["a", "b"]);
+  });
+  it("kind folder and move params", () => {
+    expect(parseKindConfig("X", {}, "Notes/Dots").folder).toBe("Notes/Dots");
+    expect(shouldMove("Work/X.md", "Atlas/Dots", "Work")).toBe(false);
+    expect(shouldMove("Efforts/X.md", "Atlas/Dots", "Work")).toBe(true);
+  });
+  it("effortStatus", () => {
+    const idea = parseKindConfig("Idea", { effort_status: "selected", effort_status_active: "working" });
+    expect(idea).toMatchObject({ effortStatus: "selected", effortStatusActive: "working" });
+    expect(effortStatus(idea, "on", ["on", "ongoing"])).toBe("working");
+    expect(effortStatus(idea, "ongoing", ["on", "ongoing"])).toBe("selected");
+    expect(effortStatus(parseKindConfig("C", { effort_status: "s" }), "on", ["on"])).toBe("s");
+    expect(effortStatus(parseKindConfig("C", {}), "on", ["on"])).toBeNull();
+    expect(effortStatus(null, "on", ["on"])).toBeNull();
+  });
+  it("fillTemplate", () => {
+    expect(fillTemplate("[[{{date}}]] {{time}}: {{x}}", { date: "2026-11-19", time: "08:05" })).toBe("[[2026-11-19]] 08:05: {{x}}");
+  });
 });
