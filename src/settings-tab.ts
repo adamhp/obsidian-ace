@@ -170,6 +170,20 @@ export class AceSettingTab extends PluginSettingTab {
 		return rows;
 	}
 
+	private async createMissingFolders(): Promise<void> {
+		try {
+			const made = await this.ace.createMissingKindFolders();
+			new Notice(
+				made.length === 0
+					? "Every kind's folder already exists."
+					: `Created ${made.length} ${made.length === 1 ? "folder" : "folders"}: ${made.join(", ")}`,
+			);
+		} catch (e) {
+			new Notice(`Create missing folders failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
+		}
+		this.update();
+	}
+
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		return [
 			this.folder("atlasFolder", "Atlas folder", "Where your notes live. New Map lists notes in this folder."),
@@ -226,6 +240,13 @@ export class AceSettingTab extends PluginSettingTab {
 			{
 				type: "group",
 				heading: "Kinds",
+				extraButtons: [
+					(b) =>
+						b
+							.setIcon("folder-plus")
+							.setTooltip("Create missing folders")
+							.onClick(() => void this.createMissingFolders()),
+				],
 				search: {
 					placeholder: "Filter kinds",
 					match: (def, q) => def.name.toLowerCase().includes(q.toLowerCase()),
