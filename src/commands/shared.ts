@@ -1,7 +1,7 @@
 import { Notice, TFile } from "obsidian";
 import { Ace } from "../vault";
 import { ask, pick } from "../ui";
-import { KindConfig, cleanName, isTaken, withFirst } from "../rules";
+import { KindConfig, cleanName, isTaken, statusChoices as statusChoicesOf, withFirst } from "../rules";
 
 interface Choice<T> {
 	label: string;
@@ -28,10 +28,11 @@ export async function askKindDetails(
 	noteName: string,
 	current: Record<string, unknown>,
 	urlGuess: string | null = null,
+	exclude?: TFile,
 ): Promise<KindDetails | null> {
 	// Map
 	const mapNames = withFirst(
-		ace.maps().map((f) => f.basename),
+		ace.maps().filter((f) => f !== exclude).map((f) => f.basename),
 		kind.defaultUp,
 	);
 	const mapChoices: Choice<string | null>[] = mapNames.map((n) => ({ label: n, value: n }));
@@ -42,13 +43,8 @@ export async function askKindDetails(
 	// Status
 	let status: string | null = null;
 	if (kind.statusOptions.length > 0) {
-		const cur = typeof current.status === "string" ? current.status.trim() : "";
-		const first = kind.statusOptions.includes(cur) ? cur : kind.defaultStatus;
-		const opts = withFirst(kind.statusOptions, first);
-		const statusChoices: Choice<string | null>[] = opts.map((s) => ({ label: s, value: s }));
-		const none: Choice<string | null> = { label: "(no status)", value: null };
-		if (first !== null && opts[0] === first) statusChoices.push(none);
-		else statusChoices.unshift(none);
+		const cur = typeof current.status === "string" ? current.status : null;
+		const statusChoices = statusChoicesOf(kind.statusOptions, cur, kind.defaultStatus);
 		const sp = await choose(ace, statusChoices, `Status for "${noteName}"`);
 		if (sp === null) return null;
 		status = sp.value;

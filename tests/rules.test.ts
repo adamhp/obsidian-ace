@@ -123,3 +123,22 @@ describe("logStamp", () => {
     expect(logStamp(new Date(2026, 10, 19, 8, 5))).toBe("[[2026-11-19]] 08:05: ");
   });
 });
+
+import { statusChoices } from "../src/rules";
+describe("statusChoices", () => {
+  const labels = (c: { label: string }[]) => c.map((x) => x.label);
+  it("current in options goes first", () => {
+    expect(labels(statusChoices(["a", "b"], "b", "a"))).toEqual(["b", "a", "(no status)"]);
+  });
+  it("no current: default first", () => {
+    expect(labels(statusChoices(["a", "b"], null, "b"))).toEqual(["b", "a", "(no status)"]);
+  });
+  it("no current, no default: none first", () => {
+    expect(labels(statusChoices(["a", "b"], null, null))).toEqual(["(no status)", "a", "b"]);
+  });
+  it("current outside options: keep first with null value, despite default", () => {
+    const c = statusChoices(["a", "b"], "weird", "a");
+    expect(labels(c)).toEqual(["(keep weird)", "a", "b", "(no status)"]);
+    expect(c[0].value).toBeNull();
+  });
+});

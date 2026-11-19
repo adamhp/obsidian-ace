@@ -128,3 +128,26 @@ export function logStamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `[[${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}]] ${p(d.getHours())}:${p(d.getMinutes())}: `;
 }
+
+export interface StatusChoice {
+  label: string;
+  value: string | null;
+}
+
+// value null = write no status (keeps any existing one).
+export function statusChoices(
+  options: string[],
+  current: string | null,
+  defaultStatus: string | null,
+): StatusChoice[] {
+  const cur = current === null ? "" : current.trim();
+  const none: StatusChoice = { label: "(no status)", value: null };
+  const set = (s: string): StatusChoice => ({ label: s, value: s });
+  if (cur !== "" && !options.includes(cur)) {
+    return [{ label: `(keep ${cur})`, value: null }, ...options.map(set), none];
+  }
+  const first = cur !== "" ? cur : defaultStatus;
+  const opts = withFirst(options, first);
+  if (first !== null && opts[0] === first) return [...opts.map(set), none];
+  return [none, ...opts.map(set)];
+}

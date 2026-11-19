@@ -26,7 +26,7 @@ export const setKind: AceCommand = {
 
 		const current = ace.fm(file);
 		const guess = firstUrl(await ace.app.vault.cachedRead(file));
-		const d = await askKindDetails(ace, kind, file.basename, current, guess);
+		const d = await askKindDetails(ace, kind, file.basename, current, guess, file);
 		if (d === null) return;
 
 		await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
