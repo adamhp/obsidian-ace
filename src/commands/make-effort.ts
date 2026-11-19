@@ -2,7 +2,7 @@ import { Notice } from "obsidian";
 import { AceCommand } from "./types";
 import { askNewName } from "./shared";
 import { pick } from "../ui";
-import { addLink, fillTemplate, isUnder } from "../rules";
+import { addLink, isUnder } from "../rules";
 
 export const makeEffort: AceCommand = {
 	id: "make-effort",
@@ -26,7 +26,7 @@ export const makeEffort: AceCommand = {
 				s.effortsFolder,
 				name,
 				{ intensity, from: `[[${file.basename}]]` },
-				fillTemplate(s.makeEffortText, { note: `[[${file.basename}]]` }),
+				await ace.effortBody("make", { note: `[[${file.basename}]]` }),
 			);
 			await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 				fm.effort = addLink(fm.effort, name);

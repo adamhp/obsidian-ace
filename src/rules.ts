@@ -22,12 +22,16 @@ export interface AceSettings {
   sourcesFolder: string;
   effortsFolder: string;
   intensities: string[];
-  newEffortText: string;
-  makeEffortText: string;
+  newEffortTemplate: string;
+  makeEffortTemplate: string;
   logFormat: string;
   dateFormat: string;
   timeFormat: string;
 }
+
+// Built-in effort bodies, used when no template file is set or it's missing.
+export const NEW_EFFORT_TEXT = "## Goal\n\n\n\n## Next steps\n\n- [ ] \n\n## Log\n\n";
+export const MAKE_EFFORT_TEXT = "Started from {{note}}.\n\n## Next steps\n\n- [ ] \n";
 
 export const DEFAULT_SETTINGS: AceSettings = {
   atlasFolder: "Atlas",
@@ -37,8 +41,8 @@ export const DEFAULT_SETTINGS: AceSettings = {
   sourcesFolder: "Atlas/Sources",
   effortsFolder: "Efforts",
   intensities: ["on", "ongoing", "simmering", "sleeping"],
-  newEffortText: "## Goal\n\n\n\n## Next steps\n\n- [ ] \n\n## Log\n\n",
-  makeEffortText: "Started from {{note}}.\n\n## Next steps\n\n- [ ] \n",
+  newEffortTemplate: "",
+  makeEffortTemplate: "",
   logFormat: "[[{{date}}]] {{time}}: ",
   dateFormat: "YYYY-MM-DD",
   timeFormat: "HH:mm",
@@ -89,8 +93,8 @@ export function normalizeSettings(raw: unknown): AceSettings {
     sourcesFolder: folderSetting(r.sourcesFolder, d.sourcesFolder),
     effortsFolder: folderSetting(r.effortsFolder, d.effortsFolder),
     intensities: list.length > 0 ? list : [...d.intensities],
-    newEffortText: textSetting(r.newEffortText, d.newEffortText, true),
-    makeEffortText: textSetting(r.makeEffortText, d.makeEffortText, true),
+    newEffortTemplate: textSetting(r.newEffortTemplate, d.newEffortTemplate, true).trim(),
+    makeEffortTemplate: textSetting(r.makeEffortTemplate, d.makeEffortTemplate, true).trim(),
     logFormat: textSetting(r.logFormat, d.logFormat, false),
     dateFormat: textSetting(r.dateFormat, d.dateFormat, false),
     timeFormat: textSetting(r.timeFormat, d.timeFormat, false),

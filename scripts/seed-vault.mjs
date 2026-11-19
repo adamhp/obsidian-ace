@@ -84,6 +84,8 @@ for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()
 	put(`Atlas/Kinds/${f}`, out, kindBody);
 }
 put("System/Templates/Map.md", null, dotsBlock);
+put("System/Templates/New effort.md", null, "Started {{date}}.\n\n## Goal\n\n\n\n## Next steps\n\n- [ ] \n\n## Log\n\n");
+put("System/Templates/Make effort.md", null, "Started from {{note}} on {{date}}.\n\n## Next steps\n\n- [ ] \n");
 // Dedicated kinds for the walkthrough (new files only; put() never overwrites without --force).
 put("Atlas/Kinds/Gadget.md", { title: "Gadget", folder: "Atlas/Dots", fields: ["colour"] }, kindBody);
 put("Atlas/Kinds/Label.md", { title: "Label", folder: "Atlas/Dots", fields: ["note"], title_template: "{{note}}" }, kindBody);
@@ -247,6 +249,8 @@ Open Settings, then ACE Actions, then Kinds. Each kind has an Edit button; click
 ## Settings
 Open Settings, then ACE Actions. Change one thing at a time and put it back afterwards.
 - [ ] Change Efforts folder to "Projects", run New effort (any name, any intensity, Single note). Expect Projects/<name>.md. Then change Efforts folder back to "Efforts".
+- [ ] Set New effort template to \`System/Templates/New effort.md\` and Make effort template to \`System/Templates/Make effort.md\`. Run New effort: expect the body to start "Started <today>.". Run Make effort on an Atlas note: expect "Started from [[<note>]] on <today>.".
+- [ ] Set New effort template to \`System/Templates/Missing.md\`. Expect a "file not found" row with Create file; New effort still uses the built-in text. Press Create file: the file appears with the built-in text and the row goes. Delete that file and set the template back.
 - [ ] Press Create starter kinds. Expect the notice "No kinds created; all 8 already there".
 - [ ] First run: set Kinds folder to \`Test/Kinds\` (empty). Press Create starter kinds. Expect "Created 8 kinds (…, Map)". Run New Map and expect the note in Atlas/Maps with a "## Dots" block. Then set Kinds folder back to \`Atlas/Kinds\`. The Test folder can be deleted.
 - [ ] Under Intensities, press + and add \`paused\`, drag it to the top, run Make effort and expect \`paused\` listed first. Then delete it.

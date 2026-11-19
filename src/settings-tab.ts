@@ -7,11 +7,11 @@ import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
 
 type FolderKey = "atlasFolder" | "kindsFolder" | "mapsFolder" | "defaultFolder" | "sourcesFolder" | "effortsFolder";
-type TextKey = "newEffortText" | "makeEffortText" | "logFormat" | "dateFormat" | "timeFormat";
+type TextKey = "newEffortTemplate" | "makeEffortTemplate" | "logFormat" | "dateFormat" | "timeFormat";
 
 const FOLDER_KEYS: readonly string[] = ["atlasFolder", "kindsFolder", "mapsFolder", "defaultFolder", "sourcesFolder", "effortsFolder"];
 // These may be blank; the other text settings fall back to their default.
-const BLANK_OK: readonly string[] = ["newEffortText", "makeEffortText"];
+const BLANK_OK: readonly string[] = ["newEffortTemplate", "makeEffortTemplate"];
 
 export class AceSettingTab extends PluginSettingTab {
 	constructor(
@@ -43,13 +43,44 @@ export class AceSettingTab extends PluginSettingTab {
 			this.s[k] = folderSetting(value, DEFAULT_SETTINGS[k]);
 		} else {
 			const k = key as TextKey;
-			this.s[k] = textSetting(value, DEFAULT_SETTINGS[k], BLANK_OK.includes(k));
+			this.s[k] = textSetting(value, DEFAULT_SETTINGS[k], BLANK_OK.includes(k)).trim();
 		}
 		await this.plugin.saveSettings();
+		// The "Create file" rows depend on the template paths.
+		if (BLANK_OK.includes(key)) this.update();
 	}
 
 	private folder(key: FolderKey, name: string, desc: string): SettingDefinition {
 		return { name, desc, control: { type: "folder", key, placeholder: DEFAULT_SETTINGS[key] } };
+	}
+
+	private effortTemplate(which: "new" | "make", name: string, desc: string): SettingDefinition[] {
+		const key = which === "new" ? "newEffortTemplate" : "makeEffortTemplate";
+		const missing = () => {
+			const path = this.ace.effortTemplatePath(which);
+			return path !== null && !(this.app.vault.getAbstractFileByPath(path) instanceof TFile);
+		};
+		return [
+			{ name, desc, control: { type: "file", key, placeholder: "System/Templates/…" } },
+			{
+				name: `${name}: file not found`,
+				desc: "Until it exists, the built-in text is used. Create it filled with that text, ready to edit.",
+				searchable: false,
+				visible: missing,
+				render: (setting) => {
+					setting.addButton((b) =>
+						b.setButtonText("Create file").onClick(async () => {
+							try {
+								new Notice(await this.ace.createEffortTemplate(which));
+							} catch (e) {
+								new Notice(`Create file failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
+							}
+							this.update();
+						}),
+					);
+				},
+			},
+		];
 	}
 
 	private momentFormat(key: "dateFormat" | "timeFormat", name: string, desc: string): SettingDefinition {
@@ -189,23 +220,16 @@ export class AceSettingTab extends PluginSettingTab {
 				heading: "Efforts",
 				items: [
 					this.folder("effortsFolder", "Efforts folder", "Efforts are filed here."),
-					{
-						type: "page",
-						name: "Effort text",
-						desc: "The body of new efforts.",
-						items: [
-							{
-								name: "New effort text",
-								desc: "Body of a new effort.",
-								control: { type: "textarea", key: "newEffortText", rows: 8 },
-							},
-							{
-								name: "Make effort text",
-								desc: "Body of the new effort. {{note}} becomes a link to the original note.",
-								control: { type: "textarea", key: "makeEffortText", rows: 8 },
-							},
-						],
-					},
+					...this.effortTemplate(
+						"new",
+						"New effort template",
+						"Body of a new effort. {{date}} and {{time}} are filled in. Blank uses the built-in text.",
+					),
+					...this.effortTemplate(
+						"make",
+						"Make effort template",
+						"Body of an effort made from a note. {{note}} becomes a link to that note; {{date}} and {{time}} are filled in. Blank uses the built-in text.",
+					),
 				],
 			},
 			{

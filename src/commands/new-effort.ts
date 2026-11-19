@@ -29,7 +29,7 @@ export const newEffort: AceCommand = {
 			dir,
 			name,
 			{ intensity },
-			s.newEffortText,
+			await ace.effortBody("new"),
 		);
 		await ace.app.workspace.getLeaf(false).openFile(file);
 		new Notice(`New Effort "${name}" (${intensity})`);

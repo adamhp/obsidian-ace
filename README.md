@@ -34,7 +34,7 @@ How each field is asked for comes from its Obsidian property type (`.obsidian/ty
 
 ## Settings
 
-Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind settings (folder, fields and their options, template) stay on Kind notes; the plugin settings below cover the rest. Folders use Obsidian's folder picker. Intensities is a list: add with +, drag to reorder, delete with the bin. The two effort texts are on the Effort text sub-page.
+Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind settings (folder, fields and their options, template) stay on Kind notes; the plugin settings below cover the rest. Folders use Obsidian's folder picker. Intensities is a list: add with +, drag to reorder, delete with the bin.
 
 | setting | default |
 |---|---|
@@ -45,11 +45,13 @@ Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind setting
 | Sources folder | `Atlas/Sources` |
 | Efforts folder | `Efforts` |
 | Intensities | `on, ongoing, simmering, sleeping` |
-| New effort text | `## Goal`, `## Next steps`, `## Log` sections |
-| Make effort text | `Started from {{note}}.` plus a `## Next steps` section |
+| New effort template | blank: built-in `## Goal`, `## Next steps`, `## Log` sections |
+| Make effort template | blank: built-in `Started from {{note}}.` plus a `## Next steps` section |
 | Log format | `[[{{date}}]] {{time}}: ` |
 | Date format | `YYYY-MM-DD` |
 | Time format | `HH:mm` |
+
+The two effort templates are markdown files whose body (without properties) becomes a new effort's body. `{{date}}` and `{{time}}` are filled in with the Log formats, and in the Make effort template `{{note}}` becomes a link to the note you started from. While a template is blank or its file is missing, the built-in text is used; a missing file gets a **Create file** button that writes the built-in text there for you to edit.
 
 The **Create starter kinds** button adds the standard Kind notes and the Map kind. The Maps folder is used when no Map kind exists and for the Map kind note it creates. It never overwrites an existing note.
 

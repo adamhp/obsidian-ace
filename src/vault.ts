@@ -1,12 +1,16 @@
-import { App, MarkdownView, Notice, TFile, TFolder } from "obsidian";
+import { App, MarkdownView, Notice, TFile, TFolder, moment } from "obsidian";
 import {
 	AceSettings,
 	KindConfig,
+	MAKE_EFFORT_TEXT,
+	NEW_EFFORT_TEXT,
 	cleanName,
 	isTaken,
+	fillTemplate,
 	linkTarget,
 	parseKindConfig,
 	shouldMove,
+	templatePath,
 } from "./rules";
 import { ProblemContext, ProblemFix, parseTypes, usesKind } from "./kinds";
 import {
@@ -225,11 +229,39 @@ export class Ace {
 	}
 
 	async templateBody(kind: KindConfig): Promise<string> {
-		if (!kind.template) return "";
-		const f = this.app.vault.getAbstractFileByPath(kind.template);
-		if (!(f instanceof TFile)) return "";
+		return kind.template ? ((await this.readBody(kind.template)) ?? "") : "";
+	}
+
+	// A markdown file's text without its properties, or null if it isn't there.
+	async readBody(path: string): Promise<string | null> {
+		const f = this.app.vault.getAbstractFileByPath(path);
+		if (!(f instanceof TFile)) return null;
 		const text = await this.app.vault.read(f);
 		return text.replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, "");
+	}
+
+	// The template path a setting points at (".md" added), or null when blank.
+	effortTemplatePath(which: "new" | "make"): string | null {
+		return templatePath(which === "new" ? this.settings.newEffortTemplate : this.settings.makeEffortTemplate);
+	}
+
+	// Body for a new effort: the template file's body, or the built-in text when it's unset or missing.
+	async effortBody(which: "new" | "make", vars: Record<string, string> = {}): Promise<string> {
+		const path = this.effortTemplatePath(which);
+		const body = (path ? await this.readBody(path) : null) ?? (which === "new" ? NEW_EFFORT_TEXT : MAKE_EFFORT_TEXT);
+		const s = this.settings;
+		return fillTemplate(body, { date: moment().format(s.dateFormat), time: moment().format(s.timeFormat), ...vars });
+	}
+
+	// Creates a missing effort template, filled with the built-in text. Never overwrites.
+	async createEffortTemplate(which: "new" | "make"): Promise<string> {
+		const path = this.effortTemplatePath(which);
+		if (path === null) return "Set a template file first.";
+		if (this.app.vault.getAbstractFileByPath(path)) return `"${path}" already exists.`;
+		const slash = path.lastIndexOf("/");
+		if (slash > 0) await this.ensureFolder(path.slice(0, slash));
+		await this.app.vault.create(path, which === "new" ? NEW_EFFORT_TEXT : MAKE_EFFORT_TEXT);
+		return `Created ${path}`;
 	}
 
 	currentFile(): TFile | null {

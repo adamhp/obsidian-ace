@@ -147,7 +147,8 @@ describe("settings", () => {
     expect(normalizeSettings({ kindsFolder: "/Notes/Kinds/", effortsFolder: "", atlasFolder: 7, intensities: "on, , ongoing, bad:one, x[y]" }))
       .toMatchObject({ kindsFolder: "Notes/Kinds", effortsFolder: "Efforts", atlasFolder: "Atlas", intensities: ["on", "ongoing"] });
     expect(normalizeSettings({ intensities: [] }).intensities).toEqual(["on", "ongoing", "simmering", "sleeping"]);
-    expect(normalizeSettings({ newEffortText: "", logFormat: "" })).toMatchObject({ newEffortText: "", logFormat: "[[{{date}}]] {{time}}: " });
+    expect(normalizeSettings({ newEffortText: "old", newEffortTemplate: " T/New.md ", logFormat: "" })).not.toHaveProperty("newEffortText");
+    expect(normalizeSettings({ newEffortTemplate: " T/New.md ", logFormat: "" })).toMatchObject({ newEffortTemplate: "T/New.md", makeEffortTemplate: "", logFormat: "[[{{date}}]] {{time}}: " });
   });
   it("normalizeSettings bad input", () => {
     expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS);
