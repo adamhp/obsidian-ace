@@ -28,13 +28,13 @@ A kind exists if `<Kinds folder>/<name>.md` exists (default `Atlas/Kinds/<name>.
 | `<field>_options` | list of choices for that field, e.g. `status_options` | none |
 | `<field>_default` | value filled in or listed first for that field, e.g. `status_default` | none |
 | `title_template` | builds the note name from fields, e.g. `{{first_name}} {{last_name}}` | none |
+| `template` | path or wikilink to a plain markdown file whose body is copied into new notes of this kind | none |
 
 How each field is asked for comes from its Obsidian property type (`.obsidian/types.json`).
-| `template` | path or wikilink to a plain markdown file whose body is copied into new notes of this kind | none |
 
 ## Settings
 
-Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind settings (folder, statuses, fields, template) stay on Kind notes; the plugin settings below cover the rest. Folders use Obsidian's folder picker. Intensities is a list: add with +, drag to reorder, delete with the bin. The two effort texts are on the Effort text sub-page.
+Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind settings (folder, fields and their options, template) stay on Kind notes; the plugin settings below cover the rest. Folders use Obsidian's folder picker. Intensities is a list: add with +, drag to reorder, delete with the bin. The two effort texts are on the Effort text sub-page.
 
 | setting | default |
 |---|---|
@@ -57,7 +57,7 @@ The **Create starter kinds** button adds the standard Kind notes and the Map kin
 
 Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
 
-Kind notes no longer use `default_status` and `status_options` as built-in keys. For each kind that has them (Article, Book, Idea, List, Library, Movie, Product), add `status` to `fields` (first) and rename `default_status` to `status_default`. `status_options` keeps its name.
+Kind notes no longer use `default_status` as a built-in key. For Article, Book, Idea, Movie and Product, add `status` first in `fields` and rename `default_status` to `status_default` (`status_options` keeps its name). For List and Library the two keys are empty, so delete them; do not add `status`.
 
 ## Filing rule
 

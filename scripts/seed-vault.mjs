@@ -73,7 +73,13 @@ for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()
 		out[k] = v;
 	}
 	out.title = name;
-	if (name === "Book") out.fields = ["author"];
+	if (out.status_options) {
+		out.fields = ["status", ...(Array.isArray(out.fields) ? out.fields : []).filter((x) => x !== "status")];
+		if (out.default_status !== undefined) out.status_default = out.default_status;
+	}
+	delete out.default_status;
+	if (name === "Book") out.fields = ["status", "author"];
+	if (name === "Person") { out.fields = ["first_name", "last_name", "last_contacted"]; out.title_template = "{{first_name}} {{last_name}}"; }
 	if (name === "Map") out.template = "System/Templates/Map.md";
 	put(`Atlas/Kinds/${f}`, out, kindBody);
 }
