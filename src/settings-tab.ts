@@ -150,8 +150,8 @@ export class AceSettingTab extends PluginSettingTab {
 				},
 			};
 		});
-		if (rows.length === 0) rows.push({ name: `No Kind notes in ${folder} yet.`, searchable: false });
-		rows.push({
+		const none = rows.length === 0;
+		rows.unshift({
 			name: "New kind",
 			desc: "Creates a Kind note and opens the editor.",
 			searchable: false,
@@ -159,14 +159,7 @@ export class AceSettingTab extends PluginSettingTab {
 				setting.addButton((b) => b.setButtonText("New").onClick(() => this.newKind()));
 			},
 		});
-		rows.push({
-			name: "Create starter kinds",
-			desc: "Adds the standard Kind notes and the Map kind. Existing notes are never overwritten.",
-			searchable: false,
-			render: (setting) => {
-				setting.addButton((b) => b.setButtonText("Create").onClick(() => this.createStarterKinds()));
-			},
-		});
+		if (none) rows.push({ name: `No Kind notes in ${folder} yet.`, searchable: false });
 		return rows;
 	}
 
@@ -235,6 +228,18 @@ export class AceSettingTab extends PluginSettingTab {
 					},
 					this.momentFormat("dateFormat", "Date format", "Moment.js format for {{date}}."),
 					this.momentFormat("timeFormat", "Time format", "Moment.js format for {{time}}."),
+				],
+			},
+			{
+				type: "group",
+				items: [
+					{
+						name: "Create starter kinds",
+						desc: "Adds the standard Kind notes and the Map kind. Existing notes are never overwritten.",
+						render: (setting) => {
+							setting.addButton((b) => b.setButtonText("Create").onClick(() => this.createStarterKinds()));
+						},
+					},
 				],
 			},
 			{
