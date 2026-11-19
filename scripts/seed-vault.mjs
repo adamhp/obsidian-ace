@@ -1,0 +1,195 @@
+// Seeds the dev vault with fictional sample notes. Usage: npm run seed [-- --force]
+// Env ACE_VAULT overrides the target. Never writes to the real vault.
+import fs from "node:fs";
+import path from "node:path";
+import YAML from "yaml";
+
+const REAL = "/mnt/c/Users/adamp/Documents/GitHub/Obsidian";
+const BLOCKED = ["/mnt/c/Users/adamp/Documents/DevVault"];
+const DEFAULT_VAULT = "/mnt/c/Users/adamp/Documents/ACE Dev Vault";
+const force = process.argv.includes("--force");
+
+const vault = path.resolve(process.env.ACE_VAULT || DEFAULT_VAULT);
+const within = (p, root) => {
+	const a = p.toLowerCase(), b = path.resolve(root).toLowerCase();
+	return a === b || a.startsWith(b + "/");
+};
+if (within(vault, REAL) || BLOCKED.some((b) => within(vault, b))) {
+	console.error(`Refusing to seed "${vault}": it is the real vault or a protected path.`);
+	process.exit(1);
+}
+
+let written = 0, skipped = 0;
+function put(rel, fm, body) {
+	const full = path.join(vault, rel);
+	if (fs.existsSync(full) && !force) { skipped++; return; }
+	fs.mkdirSync(path.dirname(full), { recursive: true });
+	let text = "";
+	if (fm && Object.keys(fm).length) text += `---\n${YAML.stringify(fm, { lineWidth: 0 })}---\n`;
+	text += body ?? "";
+	if (!text.endsWith("\n")) text += "\n";
+	fs.writeFileSync(full, text);
+	written++;
+}
+const splitFm = (t) => {
+	const m = t.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+	return m ? { fm: YAML.parse(m[1]) ?? {}, body: m[2] } : { fm: {}, body: t };
+};
+const stripTemplater = (s) => s.replace(/<%[\s\S]*?%>\n?/g, "").replace(/\n{3,}/g, "\n\n");
+
+// ---- Kind notes + Map template from the real vault (read only) ----
+const tplKind = splitFm(fs.readFileSync(`${REAL}/System/Templates/Template - Kind.md`, "utf8"));
+const kindBody = stripTemplater(tplKind.body).replace(/^\n+/, "");
+const tplMap = fs.readFileSync(`${REAL}/System/Templates/Template - Map.md`, "utf8");
+const dotsBlock = tplMap.slice(tplMap.indexOf("## Dots")).trimEnd() + "\n";
+
+const KEEP = ["is_source", "folder", "default_status", "status_options", "default_up", "title"];
+const kindsDir = `${REAL}/Atlas/Kinds`;
+for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()) {
+	const name = f.replace(/\.md$/, "");
+	const { fm } = splitFm(fs.readFileSync(path.join(kindsDir, f), "utf8"));
+	const out = {};
+	for (const k of KEEP) {
+		const v = fm[k];
+		if (v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) continue;
+		out[k] = v;
+	}
+	out.title = name;
+	if (name === "Book") out.fields = ["author"];
+	if (name === "Map") out.template = "System/Templates/Map.md";
+	put(`Atlas/Kinds/${f}`, out, kindBody);
+}
+put("System/Templates/Map.md", null, dotsBlock);
+
+// ---- Fictional notes ----
+const L = (n) => `[[${n}]]`;
+const notes = [];
+const add = (p, fm, body) => notes.push({ path: p, fm, body });
+const mapDesc = {
+	Software: "Programming tools, ideas and concepts.",
+	Culinary: "Cooking, recipes and drinks.",
+	People: "People worth remembering.",
+	Places: "Places visited or planned.",
+	Ideas: "Half-formed ideas and projects to try.",
+	Quotes: "Lines worth keeping.",
+	"Reading List": "Books and articles in the queue.",
+	Wishlist: "Things I might buy one day.",
+};
+for (const [m, d] of Object.entries(mapDesc))
+	add(`Atlas/Maps/${m}.md`, { kind: L("Map") }, `${d}\n\n${dotsBlock}`);
+
+const dot = (name, kind, ups, body = "", extra = {}) =>
+	add(`Atlas/Dots/${name}.md`, { kind: L(kind), ...(ups.length ? { up: ups.map(L) } : {}), ...extra }, body);
+// Concepts
+dot("Idempotency", "Concept", ["Software"], "An operation that gives the same result when repeated.");
+dot("Event sourcing", "Concept", ["Software"], "Store changes as a log of events instead of current state.");
+dot("Cache invalidation", "Concept", ["Software"], "One of the two hard problems.");
+dot("Eventual consistency", "Concept", ["Software"], "Replicas converge if updates stop.");
+dot("Mise en place", "Concept", ["Culinary"], "Prepare and arrange ingredients before cooking.");
+dot("Maillard reaction", "Concept", ["Culinary"], "Browning that gives seared food its flavour.");
+dot("Spaced repetition", "Concept", ["Ideas", "Reading List"], "Review material at growing intervals.");
+// Ideas
+dot("Garden planner app", "Idea", ["Ideas"], "A small app to plan beds and planting dates.", { status: "working", effort: [L("Garden Planner")] });
+dot("Sourdough experiment", "Idea", ["Culinary", "Ideas"], "Try a long cold ferment.", { status: "working", effort: [L("Sourdough Starter")] });
+dot("Podcast about local history", "Idea", ["Ideas"], "Interview long-time residents. Good for trying Make effort.", { status: "backlog" });
+dot("Plugin for daily review", "Idea", ["Software", "Ideas"], "Summarise the day from notes.", { status: "backlog" });
+dot("Trip to the coast", "Idea", ["Places", "Ideas"], "Weekend away in spring.", { status: "selected", effort: [L("Trip Planning")] });
+// People
+dot("Ada Lovelace", "Person", ["People"], "Early writer on computing.");
+dot("Grace Hopper", "Person", ["People"], "Pioneer of compilers.");
+dot("Julia Child", "Person", ["People", "Culinary"], "Made French cooking approachable.");
+// Places
+dot("Lisbon", "Place", ["Places"], "Hilly, tiled, sunny.");
+dot("Kyoto", "Place", ["Places"], "Temples and tea.");
+dot("Reykjavik", "Place", ["Places"], "Gateway to the north.");
+// Drinks
+dot("Old Fashioned", "Drink", ["Culinary"], "Whiskey, sugar, bitters, orange peel.");
+dot("Negroni", "Drink", ["Culinary"], "Equal parts gin, vermouth, Campari.");
+dot("Flat white", "Drink", ["Culinary"], "Espresso with silky milk.");
+// Collections
+dot("Favourite fonts", "Collection", ["Ideas"], "Typefaces I keep coming back to.");
+dot("Board games", "Collection", ["Ideas"], "Ones worth owning.");
+dot("Hiking trails", "Collection", ["Places"], "Trails to walk.");
+
+// Sources
+const src = (folder, name, kind, ups, extra, body = "") =>
+	add(`Atlas/Sources/${folder}/${name}.md`, { kind: L(kind), ...(ups.length ? { up: ups.map(L) } : {}), ...extra }, body);
+src("Books", "The Pragmatic Programmer", "Book", ["Software", "Reading List"], { status: "finished", author: "Hunt and Thomas" });
+src("Books", "Designing Data-Intensive Applications", "Book", ["Software", "Reading List"], { status: "reading", author: "Martin Kleppmann" });
+src("Books", "Salt Fat Acid Heat", "Book", ["Culinary", "Reading List"], { status: "to read", author: "Samin Nosrat" });
+src("Articles", "Falsehoods about names", "Article", ["Software"], { status: "finished", source: "https://example.com/falsehoods-names" });
+src("Articles", "The case for slow cooking", "Article", ["Culinary"], { status: "to read", source: "https://example.com/slow-cooking" });
+src("Articles", "How to take smart notes", "Article", ["Ideas"], { status: "reading", source: "https://example.com/smart-notes" });
+src("Videos", "Intro to event sourcing", "Video", ["Software"], { source: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+src("Videos", "Knife skills basics", "Video", ["Culinary"], { source: "https://www.youtube.com/watch?v=jNQXAC9IVRw" });
+src("Movies", "Ratatouille", "Movie", ["Culinary"], { status: "watched" });
+src("Movies", "Lost in Translation", "Movie", ["Places"], { status: "to watch" });
+src("Products", "Cast iron skillet", "Product", ["Wishlist", "Culinary"], { status: "want", source: "https://example.com/skillet" });
+src("Products", "Mechanical keyboard", "Product", ["Wishlist", "Software"], { status: "bought", source: "https://example.com/keyboard" });
+src("Quotes", "Premature optimization", "Quote", ["Quotes", "Software"], {}, "\"Premature optimization is the root of all evil.\" - Donald Knuth");
+src("Recipes", "Simple tomato sauce", "Recipe", ["Culinary"], {}, "Tomatoes, olive oil, garlic, salt. Simmer 30 minutes.");
+src("Tools", "Obsidian Bases", "Tool", ["Software"], { source: "https://obsidian.md" });
+
+// Efforts
+add("Efforts/Trip Planning.md", { intensity: "on", from: L("Trip to the coast") }, "Started from [[Trip to the coast]].\n\n## Next steps\n\n- [ ] Book the train\n");
+add("Efforts/Garden Planner/Garden Planner.md", { intensity: "ongoing", from: L("Garden planner app") }, "## Goal\n\nPlan the beds for spring.\n\n## Next steps\n\n- [ ] Sketch layout\n\n## Log\n\n");
+add("Efforts/Garden Planner/Soil Types.md", { kind: L("Concept"), up: [L("Software")] }, "Clay, sand, silt, loam. Kind is set; it must stay in Efforts when filed.");
+add("Efforts/Garden Planner/Planting Calendar.md", { kind: L("Collection") }, "Sow dates by month. Kind is set; it must stay in Efforts.");
+add("Efforts/Garden Planner/Watering notes.md", null, "Plain note inside an Effort folder, no kind.");
+add("Efforts/Sourdough Starter.md", { intensity: "simmering", from: L("Sourdough experiment") }, "Started from [[Sourdough experiment]].\n\n## Next steps\n\n- [ ] Feed the starter\n");
+
+// Messy notes
+add("Inbox/Raw thought.md", null, "Maybe write something about how notes link together.\n");
+add("Inbox/Cool article.md", null, "Worth reading later: https://example.com/cool-article\n");
+add("Inbox/Scalar up.md", { up: L("Software") }, "A note whose `up` is a scalar, not a list.\n");
+add("Inbox/Old Fashioned.md", null, "Clashes by name with Atlas/Dots/Old Fashioned.md.\n");
+add("Inbox/Meeting notes.md", null, "Agenda, decisions, actions.\n");
+add("Inbox/Book idea.md", null, "A book about gardening for lazy people. Could be an Idea or an Effort.\n");
+add("Inbox/Movie to see.md", null, "Recommended by a friend: a heist film.\n");
+add("Atlas/Sources/Misfiled Book.md", { kind: L("Book"), status: "to read", author: "Unknown" }, "Kind is Book but it is not in Atlas/Sources/Books. Try File by kind.\n");
+add("Loose note.md", null, "A note sitting in the vault root.\n");
+
+// Home
+add("Home.md", null, `# ACE Dev Vault
+
+Try each command from the command palette (Ctrl+P, "ACE Actions: ..."). Tick the box when it behaves as expected.
+
+## New note / New Map
+- [ ] Run New note, type "Trial note". Expect Inbox/Trial note.md to open.
+- [ ] Run New note, type "Old Fashioned". Expect a refusal because the name clashes (Atlas/Dots/Old Fashioned.md).
+- [ ] Run New Map, type "Hobbies". Expect Atlas/Maps/Hobbies.md with kind [[Map]] and a Dots base.
+
+## Set kind
+- [ ] Open [[Inbox/Cool article]] then Set kind then Article. Expect source pre-filled from the URL, status "to read", and the note moved to Atlas/Sources/Articles.
+- [ ] Open [[Inbox/Raw thought]] then Set kind then Concept. Expect kind [[Concept]] and a move to Atlas/Dots.
+- [ ] Open [[Inbox/Scalar up]] then Set kind then Concept. Expect up turned into a list.
+- [ ] Open [[Inbox/Old Fashioned]] then Set kind then Drink. Expect no overwrite; the move is refused or skipped because Atlas/Dots/Old Fashioned.md exists.
+- [ ] Open [[Inbox/Book idea]] then Set kind then Book. Expect an author field and a move to Atlas/Sources/Books.
+- [ ] Open [[Loose note]] then Set kind then Person. Expect it to be filed into Atlas/Dots.
+
+## Add to Map
+- [ ] Open [[Inbox/Meeting notes]] then Add to Map then Software. Expect up: ["[[Software]]"].
+- [ ] Open [[Idempotency]] then Add to Map then Reading List. Expect Reading List appended to up, no duplicate.
+
+## File by kind
+- [ ] Open [[Atlas/Sources/Misfiled Book]] then File by kind. Expect it moved to Atlas/Sources/Books.
+- [ ] Open [[Efforts/Garden Planner/Soil Types]] then File by kind. Expect it stays in Efforts/Garden Planner.
+
+## Make effort
+- [ ] Open [[Podcast about local history]] then Make effort then on. Expect a new Effort in Efforts with from set, and the Idea gets an effort link and status working.
+- [ ] Open [[Inbox/Movie to see]] then Make effort then simmering. Expect intensity set and the note moved to Efforts.
+
+## New effort
+- [ ] Run New effort, name "Learn Portuguese", sleeping, Single note. Expect Efforts/Learn Portuguese.md.
+- [ ] Run New effort, name "Home Studio", on, Folder. Expect Efforts/Home Studio/Home Studio.md.
+
+## Log
+- [ ] Open [[Efforts/Garden Planner/Garden Planner]], put the cursor under "## Log", run Log. Expect a time stamp line.
+
+## Existing structure
+- [[Software]], [[Culinary]], [[People]], [[Places]], [[Ideas]], [[Quotes]], [[Reading List]], [[Wishlist]]
+- Efforts: [[Trip Planning]], [[Garden Planner]], [[Sourdough Starter]]
+`);
+
+for (const n of notes) put(n.path, n.fm, n.body);
+console.log(`Seeded ${vault}: ${written} files written, ${skipped} skipped${force ? " (force)" : ""}.`);
