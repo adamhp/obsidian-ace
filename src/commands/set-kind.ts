@@ -12,7 +12,7 @@ export const setKind: AceCommand = {
 		if (!file) return;
 		const kinds = ace.kinds();
 		if (kinds.length === 0) {
-			new Notice("No kind notes in Atlas/Kinds.");
+			new Notice(`No kind notes in ${ace.settings.kindsFolder}.`);
 			return;
 		}
 		const cur = ace.kindOf(file);

@@ -9,7 +9,7 @@ export const newNote: AceCommand = {
 	run: async (ace) => {
 		const kinds = ace.kinds();
 		if (kinds.length === 0) {
-			new Notice("No kind notes in Atlas/Kinds.");
+			new Notice(`No kind notes in ${ace.settings.kindsFolder}.`);
 			return;
 		}
 		const kind = await pick(ace.app, kinds, (k) => k.name, "Kind");

@@ -1,7 +1,6 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
 import {
-	KINDS_FOLDER,
-	MAPS_FOLDER,
+	AceSettings,
 	KindConfig,
 	linkTarget,
 	parseKindConfig,
@@ -9,7 +8,10 @@ import {
 } from "./rules";
 
 export class Ace {
-	constructor(public app: App) {}
+	constructor(
+		public app: App,
+		public settings: AceSettings,
+	) {}
 
 	fm(file: TFile): Record<string, unknown> {
 		const f = this.app.metadataCache.getFileCache(file)?.frontmatter;
@@ -19,9 +21,9 @@ export class Ace {
 	kinds(): KindConfig[] {
 		return this.app.vault
 			.getMarkdownFiles()
-			.filter((f) => f.parent?.path === KINDS_FOLDER)
+			.filter((f) => f.parent?.path === this.settings.kindsFolder)
 			.sort((a, b) => a.basename.localeCompare(b.basename))
-			.map((f) => parseKindConfig(f.basename, this.fm(f)));
+			.map((f) => parseKindConfig(f.basename, this.fm(f), this.settings.defaultFolder));
 	}
 
 	kind(name: string | null): KindConfig | null {
@@ -35,7 +37,7 @@ export class Ace {
 	}
 
 	maps(): TFile[] {
-		const folder = this.kind("Map")?.folder ?? MAPS_FOLDER;
+		const folder = this.kind("Map")?.folder ?? this.settings.mapsFolder;
 		return this.app.vault
 			.getMarkdownFiles()
 			.filter((f) => f.path.startsWith(folder + "/"))
@@ -60,7 +62,7 @@ export class Ace {
 	}
 
 	async fileInto(file: TFile, folder: string): Promise<string> {
-		if (!shouldMove(file.path, folder)) return "";
+		if (!shouldMove(file.path, folder, this.settings.effortsFolder)) return "";
 		const target = `${folder}/${file.name}`;
 		if (this.app.vault.getAbstractFileByPath(target)) {
 			return ` (not moved: ${target} already exists)`;

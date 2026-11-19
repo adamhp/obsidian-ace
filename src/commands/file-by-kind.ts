@@ -1,6 +1,6 @@
 import { Notice } from "obsidian";
 import { AceCommand } from "./types";
-import { KINDS_FOLDER, linkTarget } from "../rules";
+import { linkTarget } from "../rules";
 
 export const fileByKind: AceCommand = {
 	id: "file-by-kind",
@@ -14,7 +14,7 @@ export const fileByKind: AceCommand = {
 			new Notice(
 				name === null
 					? `${file.basename} has no kind.`
-					: `No kind note for "${name}" in ${KINDS_FOLDER}.`,
+					: `No kind note for "${name}" in ${ace.settings.kindsFolder}.`,
 			);
 			return;
 		}

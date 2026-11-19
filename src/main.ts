@@ -1,10 +1,22 @@
 import { Notice, Plugin } from "obsidian";
 import { Ace } from "./vault";
+import { AceSettings, DEFAULT_SETTINGS, normalizeSettings } from "./rules";
 import { COMMANDS } from "./commands";
 
 export default class AcePlugin extends Plugin {
+	settings: AceSettings = { ...DEFAULT_SETTINGS };
+
+	async loadSettings() {
+		this.settings = normalizeSettings(await this.loadData());
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
 	async onload() {
-		const ace = new Ace(this.app);
+		await this.loadSettings();
+		const ace = new Ace(this.app, this.settings);
 		const fail = (name: string, e: unknown) => {
 			console.error(`ACE Actions: ${name} failed`, e);
 			new Notice(`${name} failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
