@@ -83,7 +83,7 @@ export class AceSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Folders").setHeading();
 		this.folder(containerEl, "atlasFolder", "Atlas folder", "Where your notes live. New Map lists notes in this folder.");
 		this.folder(containerEl, "kindsFolder", "Kinds folder", "Kind notes live here.");
-		this.folder(containerEl, "mapsFolder", "Maps folder", "New Maps go here unless the Map kind sets its own folder.");
+		this.folder(containerEl, "mapsFolder", "Maps folder", "Used when no Map kind exists, and for the Map kind note the plugin creates.");
 		this.folder(containerEl, "defaultFolder", "Default folder", "New notes go here when their kind has no folder.");
 		this.folder(containerEl, "sourcesFolder", "Sources folder", "Starter kinds that are sources use subfolders of this folder.");
 
@@ -102,8 +102,8 @@ export class AceSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
-		this.text(containerEl, "newEffortText", "New effort text", "Body of a new effort. You can use {{note}}, {{date}} and {{time}}.", true);
-		this.text(containerEl, "makeEffortText", "Make effort text", "Body added when you make a note into an effort. You can use {{note}}, {{date}} and {{time}}.", true);
+		this.text(containerEl, "newEffortText", "New effort text", "Body of a new effort.", true);
+		this.text(containerEl, "makeEffortText", "Make effort text", "Body of the new effort. {{note}} becomes a link to the original note.", true);
 
 		new Setting(containerEl).setName("Log").setHeading();
 		this.text(containerEl, "logFormat", "Log format", "Line added by Log. You can use {{date}} and {{time}}.");
@@ -116,7 +116,7 @@ export class AceSettingTab extends PluginSettingTab {
 		if (kinds.length === 0) {
 			info.setName(`No Kind notes in ${s.kindsFolder} yet.`);
 		} else {
-			info.setName(`Found ${kinds.length} kinds in ${s.kindsFolder}`);
+			info.setName(`Found ${kinds.length} ${kinds.length === 1 ? "kind" : "kinds"} in ${s.kindsFolder}`);
 			const list = info.descEl.createDiv();
 			for (const k of kinds) {
 				const file = this.app.vault.getAbstractFileByPath(`${s.kindsFolder}/${k.name}.md`);

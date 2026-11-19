@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS: AceSettings = {
 
 export function folderSetting(v: unknown, def: string): string {
   if (typeof v !== "string") return def;
-  const s = v.trim().replace(/^\/+/, "").replace(/\/+$/, "").trim();
+  const s = v.trim().replace(/\\/g, "/").replace(/\/{2,}/g, "/").replace(/^\/+/, "").replace(/\/+$/, "").trim();
   return s === "" ? def : s;
 }
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
   isUnder, shouldMove, resolveStatus, firstUrl, withFirst,
-  normalizeSettings, DEFAULT_SETTINGS, parseIntensities, effortStatus, fillTemplate,
+  normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, effortStatus, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
@@ -184,6 +184,16 @@ describe("settings", () => {
       .toMatchObject({ kindsFolder: "Notes/Kinds", effortsFolder: "Efforts", atlasFolder: "Atlas", intensities: ["on", "ongoing"] });
     expect(normalizeSettings({ intensities: [] }).intensities).toEqual(["on", "ongoing", "simmering", "sleeping"]);
     expect(normalizeSettings({ newEffortText: "", logFormat: "" })).toMatchObject({ newEffortText: "", logFormat: "[[{{date}}]] {{time}}: " });
+  });
+  it("normalizeSettings bad input", () => {
+    expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS);
+    expect(normalizeSettings("x")).toEqual(DEFAULT_SETTINGS);
+    expect(normalizeSettings({ kindsFolder: null }).kindsFolder).toBe(DEFAULT_SETTINGS.kindsFolder);
+  });
+  it("folderSetting cleans separators", () => {
+    expect(folderSetting("Notes\\Kinds", "D")).toBe("Notes/Kinds");
+    expect(folderSetting("//A//B///C//", "D")).toBe("A/B/C");
+    expect(folderSetting("\\\\", "D")).toBe("D");
   });
   it("normalizeSettings keeps array items with commas whole", () => {
     expect(normalizeSettings({ intensities: [" a,b ", "c", 5, "d{"] }).intensities).toEqual(["a,b", "c"]);

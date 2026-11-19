@@ -63,12 +63,12 @@ export function kindNoteBody(s: AceSettings): string {
   return `%%
 Kind note keys (frontmatter above). All are optional.
 folder: where new notes of this kind are filed (blank = ${s.defaultFolder})
-is_source: true if notes of this kind are sources
-status_options: list of statuses to choose from
-default_status: status given to new notes
-default_up: note that new notes link to in "up"
-fields: extra properties to ask for when creating a note
-template: note whose body is copied into new notes
+is_source: true to ask for a link and write "source"
+status_options: statuses offered (empty = don't ask)
+default_status: status written if the note has none
+default_up: name of the Map to suggest first when picking a Map
+fields: extra blank properties added when creating a note or setting its kind
+template: path or wikilink to a plain markdown file whose body is copied into new notes of this kind
 effort_status: status set on a note when Make effort creates an Effort from it
 effort_status_active: status used instead when the intensity is the first (active) one
 %%
@@ -93,13 +93,14 @@ ${kindNoteBody(s)}`;
 }
 
 export function mapBody(atlasFolder: string): string {
-  const folder = atlasFolder.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const expr = atlasFolder.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const folder = `file.inFolder("${expr}")`.replace(/'/g, "''");
   return `## Dots
 
 \`\`\`base
 filters:
   and:
-    - file.inFolder("${folder}")
+    - '${folder}'
     - file.hasLink(this.file)
 views:
   - type: table

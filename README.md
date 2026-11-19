@@ -1,23 +1,23 @@
 # ACE Actions
 
-An Obsidian plugin for the ACE note structure. It creates typed notes ("kinds"), sets a note's kind, links notes to Maps, files notes into their kind's folder, and starts Efforts. Kinds are configured by notes in `Atlas/Kinds`, so adding a kind or property means editing a note, not code. Everything is written as plain markdown and YAML frontmatter, so notes read the same with the plugin removed.
+An Obsidian plugin for the ACE note structure. It creates typed notes ("kinds"), sets a note's kind, links notes to Maps, files notes into their kind's folder, and starts Efforts. Kinds are configured by notes in the Kinds folder (a setting, default `Atlas/Kinds`), so adding a kind or property means editing a note, not code. Everything is written as plain markdown and YAML frontmatter, so notes read the same with the plugin removed.
 
 ## Commands
 
 No default hotkeys. Assign your own in Obsidian settings.
 
 - **New note…**: pick a kind, name, Map, and status or link if the kind asks. Creates and opens the note.
-- **New Map**: New note with kind Map preselected.
+- **New Map**: New note with kind Map preselected. If no Map kind note exists, it creates one first.
 - **Set kind**: set the active note's kind, add a Map to `up`, add the kind's fields, then file it.
-- **Add to Map**: add a Map from `Atlas/Maps` to the active note's `up`.
+- **Add to Map**: add a Map from the Maps folder (setting, default `Atlas/Maps`) to the active note's `up`.
 - **File by kind**: move the active note into its kind's folder.
-- **Make effort**: set an intensity on the active note. From an Atlas note, create a linked Effort; elsewhere, move the note to `Efforts/`.
-- **New effort**: create a single-note or folder Effort in `Efforts/`.
+- **Make effort**: set an intensity on the active note. From an Atlas note, create a linked Effort; elsewhere, move the note to the Efforts folder (setting, default `Efforts`).
+- **New effort**: create a single-note or folder Effort in the Efforts folder (setting, default `Efforts`).
 - **Log**: insert `[[YYYY-MM-DD]] HH:mm: ` at the cursor.
 
 ## Kind note keys
 
-A kind exists if `Atlas/Kinds/<name>.md` exists. These frontmatter keys configure it. All are optional.
+A kind exists if `<Kinds folder>/<name>.md` exists (default `Atlas/Kinds/<name>.md`). These frontmatter keys configure it. All are optional.
 
 | key | meaning | default |
 |---|---|---|
@@ -25,7 +25,7 @@ A kind exists if `Atlas/Kinds/<name>.md` exists. These frontmatter keys configur
 | `is_source` | asks for a link and writes `source` | false |
 | `default_status` | status written if the note has none | none |
 | `status_options` | statuses offered; empty means don't ask | none |
-| `default_up` | Map suggested first | none |
+| `default_up` | name of the Map suggested first in the picker | none |
 | `fields` | extra blank properties added on create and set kind, e.g. `[author]` | none |
 | `effort_status` | status set on a note when Make effort creates an Effort from it | none |
 | `effort_status_active` | status used instead when the intensity is the first (active) one | none |
@@ -50,7 +50,7 @@ Open Settings, then ACE Actions. Per-kind settings (folder, statuses, fields, te
 | Date format | `YYYY-MM-DD` |
 | Time format | `HH:mm` |
 
-The **Create starter kinds** button adds the standard Kind notes and the Map kind. It never overwrites an existing note.
+The **Create starter kinds** button adds the standard Kind notes and the Map kind. The Maps folder is used when no Map kind exists and for the Map kind note it creates. It never overwrites an existing note.
 
 ## Migrating from the hard-coded version
 
@@ -58,7 +58,7 @@ Add `effort_status: selected` and `effort_status_active: working` to your Idea K
 
 ## Filing rule
 
-A note moves to its kind's `folder` unless it is anywhere inside `Efforts/`. This applies to every kind. It never overwrites: if the target path exists, the note stays and a Notice says why. Moves use `fileManager.renameFile`, so links update.
+A note moves to its kind's `folder` unless it is anywhere inside the Efforts folder. This applies to every kind. It never overwrites: if the target path exists, the note stays and a Notice says why. Moves use `fileManager.renameFile`, so links update.
 
 ## Dev loop
 

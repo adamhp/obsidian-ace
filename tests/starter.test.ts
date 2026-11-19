@@ -7,7 +7,7 @@ const EXPECTED_DOTS = `## Dots
 \`\`\`base
 filters:
   and:
-    - file.inFolder("<Atlas>")
+    - 'file.inFolder("<Atlas>")'
     - file.hasLink(this.file)
 views:
   - type: table
@@ -47,8 +47,14 @@ describe("starter", () => {
     expect(kindNoteBody(s)).toContain("blank = Notes/Dots");
     expect(kindNoteBody(s)).toContain("effort_status_active");
   });
+  it("kind note body mentions every key", () => {
+    for (const k of ["folder", "is_source", "default_status", "status_options", "default_up", "fields", "template", "effort_status", "effort_status_active"]) {
+      expect(kindNoteBody(s)).toContain(`${k}:`);
+    }
+  });
   it("mapBody", () => {
-    expect(mapBody('My "Atlas"')).toContain('file.inFolder("My \\"Atlas\\"")');
+    expect(mapBody('My "Atlas"')).toContain(`- 'file.inFolder("My \\"Atlas\\"")'`);
+    expect(mapBody("Bob's #notes")).toContain(`- 'file.inFolder("Bob''s #notes")'`);
     expect(mapBody("Atlas")).toBe(EXPECTED_DOTS);
   });
 });

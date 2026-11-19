@@ -8,7 +8,14 @@ export default class AcePlugin extends Plugin {
 	settings: AceSettings = { ...DEFAULT_SETTINGS };
 
 	async loadSettings() {
-		this.settings = normalizeSettings(await this.loadData());
+		// Mutate this.settings in place, never reassign: Ace holds the reference once built.
+		let data: unknown = null;
+		try {
+			data = await this.loadData();
+		} catch (e) {
+			console.error("ACE Actions: could not read data.json, using defaults", e);
+		}
+		this.settings = normalizeSettings(data);
 	}
 
 	async saveSettings() {

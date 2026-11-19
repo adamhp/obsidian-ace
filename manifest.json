@@ -2,7 +2,7 @@
   "id": "ace-actions",
   "name": "ACE Actions",
   "version": "0.1.0",
-  "minAppVersion": "1.4.0",
+  "minAppVersion": "1.6.6",
   "description": "ACE actions: create, file and organise notes.",
   "author": "adamp",
   "isDesktopOnly": false
