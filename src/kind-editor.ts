@@ -244,7 +244,22 @@ export class KindEditorModal extends Modal {
 		if (list.length === 0) return;
 		new Setting(el).setHeading().setName("Problems");
 		const ul = el.createEl("ul", { cls: "mod-warning" });
-		for (const p of list) ul.createEl("li", { text: p });
+		for (const p of list) {
+			const li = ul.createEl("li", { text: p.text });
+			const fix = p.fix;
+			if (!fix) continue;
+			const label = fix.type === "folder" ? "Create folder" : fix.type === "map" ? "Create Map" : "Create file";
+			const b = li.createEl("button", { text: label, cls: "ace-problem-fix" });
+			b.addEventListener("click", async () => {
+				b.disabled = true;
+				try {
+					new Notice(await this.ace.fixProblem(fix));
+				} catch (e) {
+					new Notice(`${label} failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
+				}
+				this.renderProblems();
+			});
+		}
 	}
 
 	private async save(): Promise<void> {

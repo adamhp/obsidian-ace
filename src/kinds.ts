@@ -143,38 +143,54 @@ export interface ProblemContext {
   mapNames: string[];
 }
 
-export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx: ProblemContext): string[] {
-  const out: string[] = [];
+// A missing thing the editor can create with one button.
+export interface ProblemFix {
+  type: "folder" | "map" | "file";
+  target: string;
+}
+
+export interface Problem {
+  text: string;
+  fix?: ProblemFix;
+}
+
+export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx: ProblemContext): Problem[] {
+  const out: Problem[] = [];
+  const say = (text: string) => out.push({ text });
   const folder = draft.folder.replace(/^\/+/, "").replace(/\/+$/, "");
-  if (folder !== "" && !ctx.folderExists(folder)) out.push(`Folder "${draft.folder}" doesn't exist.`);
+  if (folder !== "" && !ctx.folderExists(folder)) {
+    out.push({ text: `Folder "${draft.folder}" doesn't exist.`, fix: { type: "folder", target: folder } });
+  }
   const up = draft.defaultUp;
   if (up !== null && up !== "" && !ctx.mapNames.some((m) => m.toLowerCase() === up.toLowerCase())) {
-    out.push(`Default Map "${up}" not found.`);
+    out.push({ text: `Default Map "${up}" not found.`, fix: { type: "map", target: up } });
   }
   for (const f of draft.fields) {
     if (f.default !== null && f.default.trim() !== "" && f.options.length > 0 && !f.options.includes(f.default)) {
-      out.push(`Default for ${f.name} ("${f.default}") isn't one of its options.`);
+      say(`Default for ${f.name} ("${f.default}") isn't one of its options.`);
     }
   }
   const names = draft.fields.map((f) => f.name);
   for (const m of draft.titleTemplate.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)) {
-    if (!names.includes(m[1])) out.push(`Title template uses {{${m[1]}}}, which isn't a field.`);
+    if (!names.includes(m[1])) say(`Title template uses {{${m[1]}}}, which isn't a field.`);
   }
   if (draft.template.trim() !== "") {
     const path = templatePath(draft.template);
-    if (path !== null && !ctx.fileExists(path)) out.push(`Template file "${draft.template}" not found.`);
+    if (path !== null && !ctx.fileExists(path)) {
+      out.push({ text: `Template file "${draft.template}" not found.`, fix: { type: "file", target: path } });
+    }
   }
   for (const key of Object.keys(fm)) {
     const m = /^default_(.+)$/.exec(key);
     if (m && key !== "default_up") {
-      out.push(isEmptyValue(fm[key])
+      say(isEmptyValue(fm[key])
         ? `${key} is an old, empty key. Delete it.`
         : `${key} looks like an old key. Rename it to ${m[1]}_default.`);
     }
   }
   for (const key of Object.keys(fm)) {
     const m = /^(.+)_(options|default)$/.exec(key);
-    if (m && !names.includes(m[1])) out.push(`${key} is set, but ${m[1]} isn't a field.`);
+    if (m && !names.includes(m[1])) say(`${key} is set, but ${m[1]} isn't a field.`);
   }
   return out;
 }

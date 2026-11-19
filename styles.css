@@ -8,3 +8,7 @@
 	padding-left: var(--size-4-3);
 	border-left: 2px solid var(--background-modifier-border);
 }
+
+.ace-problem-fix {
+	margin-left: var(--size-4-2);
+}

@@ -2,14 +2,17 @@ import { App, MarkdownView, Notice, TFile, TFolder } from "obsidian";
 import {
 	AceSettings,
 	KindConfig,
+	cleanName,
+	isTaken,
 	linkTarget,
 	parseKindConfig,
 	shouldMove,
 } from "./rules";
-import { ProblemContext, parseTypes, usesKind } from "./kinds";
+import { ProblemContext, ProblemFix, parseTypes, usesKind } from "./kinds";
 import {
 	STARTER_KINDS,
 	kindNoteBody,
+	mapBody,
 	mapKindBody,
 	mapKindFrontmatter,
 	starterKindFrontmatter,
@@ -153,6 +156,39 @@ export class Ace {
 			}
 		});
 		return file;
+	}
+
+	// The Map kind, creating its Kind note first if it's missing.
+	async mapKind(): Promise<{ kind: KindConfig; made: boolean }> {
+		const s = this.settings;
+		const made = await this.ensureMapKind();
+		// The metadata cache lags a just-created note, so build the kind from the known frontmatter.
+		const kind = (made ? null : this.kind("Map")) ?? parseKindConfig("Map", mapKindFrontmatter(s), s.defaultFolder);
+		return { kind, made };
+	}
+
+	// Creates what a Kind problem says is missing. Never overwrites; returns the Notice text.
+	async fixProblem(fix: ProblemFix): Promise<string> {
+		const vault = this.app.vault;
+		if (fix.type === "folder") {
+			if (vault.getAbstractFileByPath(fix.target)) return `"${fix.target}" already exists.`;
+			await this.ensureFolder(fix.target);
+			return `Created folder ${fix.target}`;
+		}
+		if (fix.type === "file") {
+			if (vault.getAbstractFileByPath(fix.target)) return `"${fix.target}" already exists.`;
+			const slash = fix.target.lastIndexOf("/");
+			if (slash > 0) await this.ensureFolder(fix.target.slice(0, slash));
+			await vault.create(fix.target, "");
+			return `Created ${fix.target}`;
+		}
+		if (cleanName(fix.target) !== fix.target) return `"${fix.target}" can't be used as a note name.`;
+		if (isTaken(fix.target, this.basenames())) return `A note named "${fix.target}" already exists.`;
+		const { kind } = await this.mapKind();
+		const props: Record<string, unknown> = { kind: "[[Map]]", up: [] };
+		for (const f of kind.fields) props[f] = null;
+		await this.createNote(kind.folder, fix.target, props, (await this.templateBody(kind)) || mapBody(this.settings.atlasFolder));
+		return `Created the Map ${fix.target} in ${kind.folder}`;
 	}
 
 	async ensureMapKind(): Promise<boolean> {

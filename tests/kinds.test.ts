@@ -109,13 +109,14 @@ describe("draft", () => {
   });
 });
 
+const texts = (ps: { text: string }[]) => ps.map((p) => p.text);
 describe("kindProblems", () => {
   const ctx = { folderExists: (p: string) => p === "Atlas/Dots", fileExists: () => false, mapNames: ["People"] };
   it("lists problems in order", () => {
-    expect(kindProblems(
+    expect(texts(kindProblems(
       { folder: "Nope", isSource: false, defaultUp: "Ghost", fields: [{ name: "s", options: ["a"], default: "b" }], titleTemplate: "{{nick}}", template: "T.md" },
       { default_status: "x", priority_options: ["low"] }, ctx,
-    )).toEqual([
+    ))).toEqual([
       'Folder "Nope" doesn\'t exist.',
       'Default Map "Ghost" not found.',
       'Default for s ("b") isn\'t one of its options.',
@@ -127,18 +128,27 @@ describe("kindProblems", () => {
   });
   it("checks hyphenated and spaced placeholders", () => {
     const d = { folder: "", isSource: false, defaultUp: null, fields: [{ name: "first-name", options: [], default: null }], titleTemplate: "{{first-name}} {{ nick name }}", template: "" };
-    expect(kindProblems(d, {}, ctx)).toEqual(["Title template uses {{nick name}}, which isn't a field."]);
+    expect(texts(kindProblems(d, {}, ctx))).toEqual(["Title template uses {{nick name}}, which isn't a field."]);
   });
   it("empty old default key says delete", () => {
     const d = { folder: "", isSource: false, defaultUp: null, fields: [], titleTemplate: "", template: "" };
-    expect(kindProblems(d, { default_x: "" }, ctx)).toEqual(["default_x is an old, empty key. Delete it."]);
+    expect(texts(kindProblems(d, { default_x: "" }, ctx))).toEqual(["default_x is an old, empty key. Delete it."]);
   });
   it("blank default is unset", () => {
     const d = { folder: "", isSource: false, defaultUp: null, fields: [{ name: "s", options: ["a"], default: " " }, { name: "t", options: ["a"], default: "" }], titleTemplate: "", template: "" };
-    expect(kindProblems(d, {}, ctx)).toEqual([]);
+    expect(texts(kindProblems(d, {}, ctx))).toEqual([]);
+  });
+  it("offers a fix for missing things only", () => {
+    const d = { folder: "/A/B/", isSource: false, defaultUp: "Ghost", fields: [{ name: "s", options: ["a"], default: "b" }], titleTemplate: "", template: "[[T/Book]]" };
+    expect(kindProblems(d, {}, ctx).map((p) => p.fix ?? null)).toEqual([
+      { type: "folder", target: "A/B" },
+      { type: "map", target: "Ghost" },
+      null,
+      { type: "file", target: "T/Book.md" },
+    ]);
   });
   it("blank folder skipped", () => {
-    expect(kindProblems({ folder: "", isSource: false, defaultUp: null, fields: [], titleTemplate: "", template: "" }, {}, ctx)).toEqual([]);
+    expect(texts(kindProblems({ folder: "", isSource: false, defaultUp: null, fields: [], titleTemplate: "", template: "" }, {}, ctx))).toEqual([]);
   });
 });
 

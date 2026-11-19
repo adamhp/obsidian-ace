@@ -55,7 +55,7 @@ The **Create starter kinds** button adds the standard Kind notes and the Map kin
 
 ### Kinds editor
 
-Under Kinds, each kind has an **Edit** button that opens an editor for its folder, source flag, default Map, fields (with options and defaults), title template and template. Save writes only those keys to the Kind note in one edit and leaves the body alone; Cancel writes nothing. A Problems list warns about things like a missing folder or a default that isn't one of the options, but doesn't block Save. The editor can also open, rename or delete the Kind note. Deleting asks first, removes the `kind` property from the notes that use it, and sends the Kind note to the trash. **New kind** creates a Kind note and opens the editor.
+Under Kinds, each kind has an **Edit** button that opens an editor for its folder, source flag, default Map, fields (with options and defaults), title template and template. Save writes only those keys to the Kind note in one edit and leaves the body alone; Cancel writes nothing. A Problems list warns about things like a missing folder or a default that isn't one of the options, but doesn't block Save. A missing folder, default Map or template file gets a **Create** button that makes it straight away (never overwriting anything). The editor can also open, rename or delete the Kind note. Deleting asks first, removes the `kind` property from the notes that use it, and sends the Kind note to the trash. **New kind** creates a Kind note and opens the editor.
 
 ## Migrating from the hard-coded version
 

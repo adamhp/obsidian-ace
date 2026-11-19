@@ -240,6 +240,7 @@ Open Settings, then ACE Actions, then Kinds. Each kind has an Edit button; click
 - [ ] Open Card in the editor, press Delete. Expect a confirmation saying 0 notes use it, then the Notice "Deleted the Card kind; 0 notes now have no kind." and Card.md in the trash.
 - [ ] Open Gadget in the editor and check its usage: two seeded notes use it ([[Gadget One]] written \`[[Gadget]]\` and [[Gadget Two]] written \`[[gadget]]\`). Press Delete. Expect the confirmation to say 2 notes use it, then the Notice "Deleted the Gadget kind; 2 notes now have no kind." Open both notes and expect only the \`kind\` property gone (up, colour and the body unchanged). Gadget.md is in the trash.
 - [ ] Open the Map kind in the editor. Expect no Rename or Delete buttons and the line "Map is part of ACE and can't be renamed or deleted." Other edits still save.
+- [ ] Open the Gadget Kind note and add \`default_up: Tools Map\` to its properties by hand. Then edit Gadget, set Folder to \`Atlas/Gadgets\` and Template to \`System/Templates/Gadget\`. Expect three Problems, each with a Create button. Press each: expect the folder, the Map note (in Atlas/Maps, with a Dots view) and an empty template file to appear, and each Problem to disappear. Cancel the editor; the Kind note is unchanged (remove \`default_up\` by hand afterwards if you like).
 - [ ] Open the Book note, add \`default_status: x\` by hand to its properties, then open the Book editor. Expect the Problems line "default_status looks like an old key. Rename it to status_default." Remove the key afterwards.
 
 ## Settings
