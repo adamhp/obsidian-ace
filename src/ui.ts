@@ -204,3 +204,45 @@ export async function askValue(
 		new ValueModal(app, title, type, initial, resolve).open();
 	});
 }
+
+class ConfirmModal extends Modal {
+	private answered = false;
+
+	constructor(
+		app: App,
+		private title: string,
+		private message: string,
+		private button: string,
+		private done: (v: boolean) => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		this.titleEl.setText(this.title);
+		this.contentEl.createEl("p", { text: this.message });
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
+			.addButton((b) =>
+				b
+					.setButtonText(this.button)
+					.setWarning()
+					.onClick(() => {
+						this.answered = true;
+						this.done(true);
+						this.close();
+					}),
+			);
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+		if (!this.answered) this.done(false);
+	}
+}
+
+export function confirm(app: App, title: string, message: string, button: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		new ConfirmModal(app, title, message, button, resolve).open();
+	});
+}

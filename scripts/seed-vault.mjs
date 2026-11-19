@@ -222,6 +222,14 @@ Asks name, then intensity, then shape.
 ## Log
 - [ ] Open [[Efforts/Garden Planner/Garden Planner]], put the cursor under "## Log", run Log. Expect a time stamp line.
 
+## Edit kinds
+Open Settings, then ACE Actions, then Kinds. Each kind has an Edit button; clicking the name opens the Kind note.
+- [ ] Edit Book: add the option \`abandoned\` to status, press Save, then open the Book note and expect \`abandoned\` in status_options and every other key and the body unchanged.
+- [ ] Edit Book, change the folder, press Cancel. Expect the Book note unchanged.
+- [ ] Press New kind, name it "Recipe Card". Expect the editor to open on a new Kind note. Press Rename, name it "Card". Expect Atlas/Kinds/Card.md.
+- [ ] Open Card in the editor, press Delete. Expect a confirmation saying 0 notes use it, then the Notice "Deleted the Card kind; 0 notes now have no kind." and Card.md in the trash.
+- [ ] Open the Book note, add \`default_status: x\` by hand to its properties, then open the Book editor. Expect the Problems line "default_status looks like an old key. Rename it to status_default." Remove the key afterwards.
+
 ## Settings
 Open Settings, then ACE Actions. Change one thing at a time and put it back afterwards.
 - [ ] Change Efforts folder to "Projects", run New effort (any name, any intensity, Single note). Expect Projects/<name>.md. Then change Efforts folder back to "Efforts".

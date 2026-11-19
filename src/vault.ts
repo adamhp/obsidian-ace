@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice, TFile } from "obsidian";
+import { App, MarkdownView, Notice, TFile, TFolder } from "obsidian";
 import {
 	AceSettings,
 	KindConfig,
@@ -6,7 +6,7 @@ import {
 	parseKindConfig,
 	shouldMove,
 } from "./rules";
-import { parseTypes } from "./kinds";
+import { ProblemContext, parseTypes, usesKind } from "./kinds";
 import {
 	STARTER_KINDS,
 	kindNoteBody,
@@ -50,6 +50,45 @@ export class Ace {
 
 	kindOf(file: TFile): KindConfig | null {
 		return this.kind(linkTarget(this.fm(file).kind));
+	}
+
+	kindFile(name: string): TFile | null {
+		const n = name.toLowerCase();
+		return (
+			this.app.vault
+				.getMarkdownFiles()
+				.find((f) => f.parent?.path === this.settings.kindsFolder && f.basename.toLowerCase() === n) ?? null
+		);
+	}
+
+	problemContext(): ProblemContext {
+		return {
+			folderExists: (p) => this.app.vault.getAbstractFileByPath(p) instanceof TFolder,
+			fileExists: (p) => this.app.vault.getAbstractFileByPath(p) instanceof TFile,
+			mapNames: this.maps().map((f) => f.basename),
+		};
+	}
+
+	createKind(name: string): Promise<TFile> {
+		return this.createNote(this.settings.kindsFolder, name, { title: name }, kindNoteBody(this.settings));
+	}
+
+	notesUsingKind(name: string): TFile[] {
+		const own = this.kindFile(name);
+		return this.app.vault
+			.getMarkdownFiles()
+			.filter((f) => f !== own && usesKind(this.fm(f).kind, name));
+	}
+
+	async deleteKind(file: TFile): Promise<number> {
+		const users = this.notesUsingKind(file.basename);
+		for (const f of users) {
+			await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {
+				delete fm.kind;
+			});
+		}
+		await this.app.fileManager.trashFile(file);
+		return users.length;
 	}
 
 	maps(): TFile[] {

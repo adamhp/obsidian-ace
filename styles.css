@@ -1,0 +1,10 @@
+
+.ace-kind-link {
+	cursor: pointer;
+}
+
+.ace-field {
+	margin-bottom: var(--size-4-2);
+	padding-left: var(--size-4-3);
+	border-left: 2px solid var(--background-modifier-border);
+}

@@ -1,8 +1,10 @@
 import { App, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
-import { AceSettings, DEFAULT_SETTINGS, folderSetting, intensityError, textSetting } from "./rules";
+import { AceSettings, DEFAULT_SETTINGS, cleanName, folderSetting, intensityError, isTaken, textSetting } from "./rules";
 import { ask } from "./ui";
+import { KindEditorModal } from "./kind-editor";
+import { draftFromFrontmatter, kindProblems } from "./kinds";
 
 type FolderKey = "atlasFolder" | "kindsFolder" | "mapsFolder" | "defaultFolder" | "sourcesFolder" | "effortsFolder";
 type TextKey = "newEffortText" | "makeEffortText" | "logFormat" | "dateFormat" | "timeFormat";
@@ -101,17 +103,56 @@ export class AceSettingTab extends PluginSettingTab {
 		this.update();
 	}
 
+	private async newKind(): Promise<void> {
+		const taken = this.ace.basenames();
+		const v = await ask(this.app, "New kind", "", (x) => {
+			const n = cleanName(x);
+			if (n === "") return "Name cannot be empty.";
+			if (isTaken(n, taken)) return `A note named "${n}" already exists.`;
+			return null;
+		});
+		if (v === null) return;
+		try {
+			const file = await this.ace.createKind(cleanName(v));
+			this.update();
+			new KindEditorModal(this.ace, file, () => this.update()).open();
+		} catch (e) {
+			new Notice(`New kind failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
+		}
+	}
+
 	private kindRows(): SettingDefinition[] {
 		const folder = this.s.kindsFolder;
-		const rows: SettingDefinition[] = this.ace.kinds().map((k) => ({
-			name: k.name,
-			desc: k.folder,
-			action: () => {
-				const file = this.app.vault.getAbstractFileByPath(`${folder}/${k.name}.md`);
-				if (file instanceof TFile) void this.app.workspace.getLeaf(false).openFile(file);
-			},
-		}));
+		const ctx = this.ace.problemContext();
+		const rows: SettingDefinition[] = this.ace.kinds().map((k) => {
+			const file = this.app.vault.getAbstractFileByPath(`${folder}/${k.name}.md`);
+			const fm = file instanceof TFile ? this.ace.fm(file) : {};
+			const n = kindProblems(draftFromFrontmatter(fm), fm, ctx).length;
+			return {
+				name: k.name,
+				desc: n > 0 ? `${k.folder} · ⚠ ${n}` : k.folder,
+				render: (setting) => {
+					setting.nameEl.addClass("ace-kind-link");
+					setting.nameEl.addEventListener("click", () => {
+						if (file instanceof TFile) void this.app.workspace.getLeaf(false).openFile(file);
+					});
+					setting.addButton((b) =>
+						b.setButtonText("Edit").onClick(() => {
+							if (file instanceof TFile) new KindEditorModal(this.ace, file, () => this.update()).open();
+						}),
+					);
+				},
+			};
+		});
 		if (rows.length === 0) rows.push({ name: `No Kind notes in ${folder} yet.`, searchable: false });
+		rows.push({
+			name: "New kind",
+			desc: "Creates a Kind note and opens the editor.",
+			searchable: false,
+			render: (setting) => {
+				setting.addButton((b) => b.setButtonText("New").onClick(() => this.newKind()));
+			},
+		});
 		rows.push({
 			name: "Create starter kinds",
 			desc: "Adds the standard Kind notes and the Map kind. Existing notes are never overwritten.",

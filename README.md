@@ -53,6 +53,10 @@ Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind setting
 
 The **Create starter kinds** button adds the standard Kind notes and the Map kind. The Maps folder is used when no Map kind exists and for the Map kind note it creates. It never overwrites an existing note.
 
+### Kinds editor
+
+Under Kinds, each kind has an **Edit** button that opens an editor for its folder, source flag, default Map, fields (with options and defaults), title template and template. Save writes only those keys to the Kind note in one edit and leaves the body alone; Cancel writes nothing. A Problems list warns about things like a missing folder or a default that isn't one of the options, but doesn't block Save. The editor can also open, rename or delete the Kind note. Deleting asks first, removes the `kind` property from the notes that use it, and sends the Kind note to the trash. **New kind** creates a Kind note and opens the editor.
+
 ## Migrating from the hard-coded version
 
 Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
