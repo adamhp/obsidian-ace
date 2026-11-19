@@ -31,7 +31,7 @@ A kind exists if `<Kinds folder>/<name>.md` exists (default `Atlas/Kinds/<name>.
 
 ## Settings
 
-Open Settings, then ACE Actions. Per-kind settings (folder, statuses, fields, template) stay on Kind notes; the plugin settings below cover the rest.
+Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind settings (folder, statuses, fields, template) stay on Kind notes; the plugin settings below cover the rest. Folders use Obsidian's folder picker. Intensities is a list: add with +, drag to reorder, delete with the bin. The two effort texts are on the Effort text sub-page.
 
 | setting | default |
 |---|---|

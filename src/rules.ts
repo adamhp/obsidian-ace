@@ -47,7 +47,7 @@ export function folderSetting(v: unknown, def: string): string {
   return s === "" ? def : s;
 }
 
-function textSetting(v: unknown, def: string, allowEmpty: boolean): string {
+export function textSetting(v: unknown, def: string, allowEmpty: boolean): string {
   if (typeof v !== "string") return def;
   return v === "" && !allowEmpty ? def : v;
 }
@@ -59,6 +59,15 @@ function cleanIntensities(items: string[]): string[] {
 
 export function parseIntensities(text: string): string[] {
   return cleanIntensities(text.split(","));
+}
+
+// Why a new intensity can't be added, or null if it can.
+export function intensityError(v: string, existing: string[]): string | null {
+  const s = v.trim();
+  if (s === "") return "Enter a name.";
+  if (/[[\]{}:#|]/.test(s)) return "Avoid the characters [ ] { } : # |.";
+  if (existing.some((x) => x.toLowerCase() === s.toLowerCase())) return "Already in the list.";
+  return null;
 }
 
 export function normalizeSettings(raw: unknown): AceSettings {

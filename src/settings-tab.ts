@@ -1,37 +1,15 @@
-import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, TFile, TFolder } from "obsidian";
+import { App, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
-import { AceSettings, DEFAULT_SETTINGS, folderSetting, parseIntensities } from "./rules";
-
-class FolderSuggest extends AbstractInputSuggest<TFolder> {
-	constructor(
-		app: App,
-		private input: HTMLInputElement,
-	) {
-		super(app, input);
-	}
-
-	getSuggestions(query: string): TFolder[] {
-		const q = query.toLowerCase();
-		return this.app.vault
-			.getAllFolders()
-			.filter((f) => f.path.toLowerCase().includes(q))
-			.slice(0, 50);
-	}
-
-	renderSuggestion(folder: TFolder, el: HTMLElement): void {
-		el.setText(folder.path);
-	}
-
-	selectSuggestion(folder: TFolder): void {
-		this.input.value = folder.path;
-		this.input.dispatchEvent(new Event("input"));
-		this.close();
-	}
-}
+import { AceSettings, DEFAULT_SETTINGS, folderSetting, intensityError, textSetting } from "./rules";
+import { ask } from "./ui";
 
 type FolderKey = "atlasFolder" | "kindsFolder" | "mapsFolder" | "defaultFolder" | "sourcesFolder" | "effortsFolder";
 type TextKey = "newEffortText" | "makeEffortText" | "logFormat" | "dateFormat" | "timeFormat";
+
+const FOLDER_KEYS: readonly string[] = ["atlasFolder", "kindsFolder", "mapsFolder", "defaultFolder", "sourcesFolder", "effortsFolder"];
+// These may be blank; the other text settings fall back to their default.
+const BLANK_OK: readonly string[] = ["newEffortText", "makeEffortText"];
 
 export class AceSettingTab extends PluginSettingTab {
 	constructor(
@@ -42,109 +20,171 @@ export class AceSettingTab extends PluginSettingTab {
 		super(app, plugin);
 	}
 
-	private folder(el: HTMLElement, key: FolderKey, name: string, desc: string): void {
-		const s: AceSettings = this.plugin.settings;
-		new Setting(el)
-			.setName(name)
-			.setDesc(desc)
-			.addText((t) => {
-				t.setPlaceholder(DEFAULT_SETTINGS[key])
-					.setValue(s[key])
-					.onChange(async (v) => {
-						s[key] = folderSetting(v, DEFAULT_SETTINGS[key]);
-						await this.plugin.saveSettings();
-					});
-				new FolderSuggest(this.app, t.inputEl);
-			});
+	private get s(): AceSettings {
+		return this.plugin.settings;
 	}
 
-	private text(el: HTMLElement, key: TextKey, name: string, desc: string, area = false): void {
-		const s: AceSettings = this.plugin.settings;
-		const set = new Setting(el).setName(name).setDesc(desc);
-		const onChange = async (v: string) => {
-			s[key] = v === "" && !(key === "newEffortText" || key === "makeEffortText") ? DEFAULT_SETTINGS[key] : v;
-			await this.plugin.saveSettings();
+	// Settings are changed in place: Ace holds the same object.
+	getControlValue(key: string): unknown {
+		return this.s[key as keyof AceSettings];
+	}
+
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (FOLDER_KEYS.includes(key)) {
+			const k = key as FolderKey;
+			this.s[k] = folderSetting(value, DEFAULT_SETTINGS[k]);
+		} else {
+			const k = key as TextKey;
+			this.s[k] = textSetting(value, DEFAULT_SETTINGS[k], BLANK_OK.includes(k));
+		}
+		await this.plugin.saveSettings();
+	}
+
+	private folder(key: FolderKey, name: string, desc: string): SettingDefinition {
+		return { name, desc, control: { type: "folder", key, placeholder: DEFAULT_SETTINGS[key] } };
+	}
+
+	private momentFormat(key: "dateFormat" | "timeFormat", name: string, desc: string): SettingDefinition {
+		return {
+			name,
+			desc,
+			render: (setting) => {
+				const sample = setting.descEl.createDiv({ cls: "ace-format-sample" });
+				setting.addMomentFormat((m) =>
+					m
+						.setDefaultFormat(DEFAULT_SETTINGS[key])
+						.setPlaceholder(DEFAULT_SETTINGS[key])
+						.setValue(this.s[key])
+						.setSampleEl(sample)
+						.onChange((v) => this.setControlValue(key, v)),
+				);
+			},
 		};
-		if (area) {
-			set.addTextArea((t) => {
-				t.setValue(s[key]).onChange(onChange);
-				t.inputEl.rows = 8;
-			});
-		} else {
-			set.addText((t) => t.setPlaceholder(DEFAULT_SETTINGS[key]).setValue(s[key]).onChange(onChange));
-		}
 	}
 
-	display(): void {
-		const { containerEl } = this;
-		const s = this.plugin.settings;
-		containerEl.empty();
+	private async addIntensity(): Promise<void> {
+		const v = await ask(this.app, "New intensity", "", (x) => intensityError(x, this.s.intensities));
+		if (v === null) return;
+		this.s.intensities.push(v.trim());
+		await this.plugin.saveSettings();
+		this.update();
+	}
 
-		new Setting(containerEl).setName("Folders").setHeading();
-		this.folder(containerEl, "atlasFolder", "Atlas folder", "Where your notes live. New Map lists notes in this folder.");
-		this.folder(containerEl, "kindsFolder", "Kinds folder", "Kind notes live here.");
-		this.folder(containerEl, "mapsFolder", "Maps folder", "Used when no Map kind exists, and for the Map kind note the plugin creates.");
-		this.folder(containerEl, "defaultFolder", "Default folder", "New notes go here when their kind has no folder.");
-		this.folder(containerEl, "sourcesFolder", "Sources folder", "Starter kinds that are sources use subfolders of this folder.");
+	private async moveIntensity(from: number, to: number): Promise<void> {
+		const [item] = this.s.intensities.splice(from, 1);
+		this.s.intensities.splice(to, 0, item);
+		await this.plugin.saveSettings();
+		this.update();
+	}
 
-		new Setting(containerEl).setName("Efforts").setHeading();
-		this.folder(containerEl, "effortsFolder", "Efforts folder", "Efforts are filed here.");
-		new Setting(containerEl)
-			.setName("Intensities")
-			.setDesc("Comma-separated list of effort intensities. Avoid the characters [ ] { } : # |.")
-			.addText((t) =>
-				t
-					.setPlaceholder(DEFAULT_SETTINGS.intensities.join(", "))
-					.setValue(s.intensities.join(", "))
-					.onChange(async (v) => {
-						const list = parseIntensities(v);
-						s.intensities = list.length > 0 ? list : [...DEFAULT_SETTINGS.intensities];
-						await this.plugin.saveSettings();
-					}),
-			);
-		this.text(containerEl, "newEffortText", "New effort text", "Body of a new effort.", true);
-		this.text(containerEl, "makeEffortText", "Make effort text", "Body of the new effort. {{note}} becomes a link to the original note.", true);
-
-		new Setting(containerEl).setName("Log").setHeading();
-		this.text(containerEl, "logFormat", "Log format", "Line added by Log. You can use {{date}} and {{time}}.");
-		this.text(containerEl, "dateFormat", "Date format", "Moment.js format for {{date}}, for example YYYY-MM-DD.");
-		this.text(containerEl, "timeFormat", "Time format", "Moment.js format for {{time}}, for example HH:mm.");
-
-		new Setting(containerEl).setName("Kinds").setHeading();
-		const kinds = this.ace.kinds();
-		const info = new Setting(containerEl);
-		if (kinds.length === 0) {
-			info.setName(`No Kind notes in ${s.kindsFolder} yet.`);
-		} else {
-			info.setName(`Found ${kinds.length} ${kinds.length === 1 ? "kind" : "kinds"} in ${s.kindsFolder}`);
-			const list = info.descEl.createDiv();
-			for (const k of kinds) {
-				const file = this.app.vault.getAbstractFileByPath(`${s.kindsFolder}/${k.name}.md`);
-				const a = list.createEl("a", { text: k.name, cls: "ace-kind-link" });
-				list.appendText(" ");
-				a.addEventListener("click", (e) => {
-					e.preventDefault();
-					if (file instanceof TFile) void this.app.workspace.getLeaf(false).openFile(file);
-				});
-			}
+	private async deleteIntensity(i: number): Promise<void> {
+		if (this.s.intensities.length === 1) {
+			new Notice("Keep at least one intensity.");
+			return;
 		}
-		new Setting(containerEl)
-			.setName("Create starter kinds")
-			.setDesc("Adds the standard Kind notes and the Map kind. Existing notes are never overwritten.")
-			.addButton((b) =>
-				b.setButtonText("Create").onClick(async () => {
-					try {
-						const r = await this.ace.createStarterKinds();
-						new Notice(
-							r.created.length === 0
-								? `No kinds created; all ${r.skipped.length} already there`
-								: `Created ${r.created.length} kinds (${r.created.join(", ")}); skipped ${r.skipped.length} (already there)`,
-						);
-					} catch (e) {
-						new Notice(`Create starter kinds failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
-					}
-					this.display();
-				}),
+		this.s.intensities.splice(i, 1);
+		await this.plugin.saveSettings();
+		this.update();
+	}
+
+	private async createStarterKinds(): Promise<void> {
+		try {
+			const r = await this.ace.createStarterKinds();
+			new Notice(
+				r.created.length === 0
+					? `No kinds created; all ${r.skipped.length} already there`
+					: `Created ${r.created.length} kinds (${r.created.join(", ")}); skipped ${r.skipped.length} (already there)`,
 			);
+		} catch (e) {
+			new Notice(`Create starter kinds failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
+		}
+		this.update();
+	}
+
+	private kindRows(): SettingDefinition[] {
+		const folder = this.s.kindsFolder;
+		const rows: SettingDefinition[] = this.ace.kinds().map((k) => ({
+			name: k.name,
+			desc: k.folder,
+			action: () => {
+				const file = this.app.vault.getAbstractFileByPath(`${folder}/${k.name}.md`);
+				if (file instanceof TFile) void this.app.workspace.getLeaf(false).openFile(file);
+			},
+		}));
+		if (rows.length === 0) rows.push({ name: `No Kind notes in ${folder} yet.`, searchable: false });
+		rows.push({
+			name: "Create starter kinds",
+			desc: "Adds the standard Kind notes and the Map kind. Existing notes are never overwritten.",
+			searchable: false,
+			render: (setting) => {
+				setting.addButton((b) => b.setButtonText("Create").onClick(() => this.createStarterKinds()));
+			},
+		});
+		return rows;
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			this.folder("atlasFolder", "Atlas folder", "Where your notes live. New Map lists notes in this folder."),
+			this.folder("kindsFolder", "Kinds folder", "Kind notes live here."),
+			this.folder("mapsFolder", "Maps folder", "Used when no Map kind exists, and for the Map kind note the plugin creates."),
+			this.folder("defaultFolder", "Default folder", "New notes go here when their kind has no folder."),
+			this.folder("sourcesFolder", "Sources folder", "Starter kinds that are sources use subfolders of this folder."),
+			{
+				type: "group",
+				heading: "Efforts",
+				items: [
+					this.folder("effortsFolder", "Efforts folder", "Efforts are filed here."),
+					{
+						type: "page",
+						name: "Effort text",
+						desc: "The body of new efforts.",
+						items: [
+							{
+								name: "New effort text",
+								desc: "Body of a new effort.",
+								control: { type: "textarea", key: "newEffortText", rows: 8 },
+							},
+							{
+								name: "Make effort text",
+								desc: "Body of the new effort. {{note}} becomes a link to the original note.",
+								control: { type: "textarea", key: "makeEffortText", rows: 8 },
+							},
+						],
+					},
+				],
+			},
+			{
+				type: "list",
+				heading: "Intensities",
+				emptyState: "No intensities.",
+				addItem: { name: "Add intensity", action: () => void this.addIntensity() },
+				onReorder: (from, to) => void this.moveIntensity(from, to),
+				onDelete: (i) => void this.deleteIntensity(i),
+				items: this.s.intensities.map((name) => ({ name })),
+			},
+			{
+				type: "group",
+				heading: "Log",
+				items: [
+					{
+						name: "Log format",
+						desc: "Line added by Log. You can use {{date}} and {{time}}.",
+						control: { type: "text", key: "logFormat", placeholder: DEFAULT_SETTINGS.logFormat },
+					},
+					this.momentFormat("dateFormat", "Date format", "Moment.js format for {{date}}."),
+					this.momentFormat("timeFormat", "Time format", "Moment.js format for {{time}}."),
+				],
+			},
+			{
+				type: "group",
+				heading: "Kinds",
+				search: {
+					placeholder: "Filter kinds",
+					match: (def, q) => def.name.toLowerCase().includes(q.toLowerCase()),
+				},
+				items: this.kindRows(),
+			},
+		];
 	}
 }

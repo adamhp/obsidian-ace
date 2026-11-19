@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
   isUnder, shouldMove, resolveStatus, firstUrl, withFirst,
-  normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, fillTemplate,
+  normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, intensityError, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
@@ -206,6 +206,12 @@ describe("settings", () => {
     expect(parseKindConfig("X", {}, "Notes/Dots").folder).toBe("Notes/Dots");
     expect(shouldMove("Work/X.md", "Atlas/Dots", "Work")).toBe(false);
     expect(shouldMove("Efforts/X.md", "Atlas/Dots", "Work")).toBe(true);
+  });
+  it("intensityError", () => {
+    expect(intensityError("  ", ["on"])).toBe("Enter a name.");
+    expect(intensityError("a#b", ["on"])).toBe("Avoid the characters [ ] { } : # |.");
+    expect(intensityError(" ON ", ["on"])).toBe("Already in the list.");
+    expect(intensityError("paused", ["on"])).toBeNull();
   });
   it("fillTemplate", () => {
     expect(fillTemplate("[[{{date}}]] {{time}}: {{x}}", { date: "2026-11-19", time: "08:05" })).toBe("[[2026-11-19]] 08:05: {{x}}");
