@@ -75,6 +75,7 @@ for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()
 	out.title = name;
 	if (name === "Book") out.fields = ["author"];
 	if (name === "Map") out.template = "System/Templates/Map.md";
+	if (name === "Idea") { out.effort_status = "selected"; out.effort_status_active = "working"; }
 	put(`Atlas/Kinds/${f}`, out, kindBody);
 }
 put("System/Templates/Map.md", null, dotsBlock);
@@ -206,6 +207,13 @@ Asks name, then intensity, then shape.
 
 ## Log
 - [ ] Open [[Efforts/Garden Planner/Garden Planner]], put the cursor under "## Log", run Log. Expect a time stamp line.
+
+## Settings
+Open Settings, then ACE Actions. Change one thing at a time and put it back afterwards.
+- [ ] Change Efforts folder to "Projects", run New effort (any name, any intensity, Single note). Expect Projects/<name>.md. Then change Efforts folder back to "Efforts".
+- [ ] Press Create starter kinds. Expect the notice "No kinds created; all 8 already there".
+- [ ] Change Time format to "HH:mm:ss", run Log in an Effort. Expect the time stamp to show seconds. Then change it back to "HH:mm".
+- [ ] Open [[Plugin for daily review]], run Make effort and pick the first intensity. Expect the Idea to get status: working (from its Kind note: effort_status_active).
 
 ## Existing structure
 - [[Software]], [[Culinary]], [[People]], [[Places]], [[Ideas]], [[Quotes]], [[Reading List]], [[Wishlist]]

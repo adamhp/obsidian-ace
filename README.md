@@ -27,7 +27,34 @@ A kind exists if `Atlas/Kinds/<name>.md` exists. These frontmatter keys configur
 | `status_options` | statuses offered; empty means don't ask | none |
 | `default_up` | Map suggested first | none |
 | `fields` | extra blank properties added on create and set kind, e.g. `[author]` | none |
+| `effort_status` | status set on a note when Make effort creates an Effort from it | none |
+| `effort_status_active` | status used instead when the intensity is the first (active) one | none |
 | `template` | path or wikilink to a plain markdown file whose body is copied into new notes of this kind | none |
+
+## Settings
+
+Open Settings, then ACE Actions. Per-kind settings (folder, statuses, fields, template) stay on Kind notes; the plugin settings below cover the rest.
+
+| setting | default |
+|---|---|
+| Atlas folder | `Atlas` |
+| Kinds folder | `Atlas/Kinds` |
+| Maps folder | `Atlas/Maps` |
+| Default folder | `Atlas/Dots` |
+| Sources folder | `Atlas/Sources` |
+| Efforts folder | `Efforts` |
+| Intensities | `on, ongoing, simmering, sleeping` |
+| New effort text | `## Goal`, `## Next steps`, `## Log` sections |
+| Make effort text | `Started from {{note}}.` plus a `## Next steps` section |
+| Log format | `[[{{date}}]] {{time}}: ` |
+| Date format | `YYYY-MM-DD` |
+| Time format | `HH:mm` |
+
+The **Create starter kinds** button adds the standard Kind notes and the Map kind. It never overwrites an existing note.
+
+## Migrating from the hard-coded version
+
+Add `effort_status: selected` and `effort_status_active: working` to your Idea Kind note.
 
 ## Filing rule
 
