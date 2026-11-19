@@ -2,16 +2,16 @@ import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
   isUnder, shouldMove, resolveStatus, firstUrl, withFirst,
-  normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, effortStatus, fillTemplate,
+  normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
   it("parses full config", () => {
     expect(parseKindConfig("Book", { is_source: "true", status_options: ["to read","reading","finished"], default_status: "to read", folder: "Atlas/Sources/Books/", fields: ["author"] }))
-      .toEqual({ name: "Book", folder: "Atlas/Sources/Books", isSource: true, defaultStatus: "to read", statusOptions: ["to read","reading","finished"], defaultUp: null, fields: ["author"], template: null, effortStatus: null, effortStatusActive: null });
+      .toEqual({ name: "Book", folder: "Atlas/Sources/Books", isSource: true, defaultStatus: "to read", statusOptions: ["to read","reading","finished"], defaultUp: null, fields: ["author"], template: null });
   });
   it("defaults", () => {
-    expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultStatus: null, statusOptions: [], defaultUp: null, fields: [], template: null, effortStatus: null, effortStatusActive: null });
+    expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultStatus: null, statusOptions: [], defaultUp: null, fields: [], template: null });
   });
   it("handles empty/null and links", () => {
     const c = parseKindConfig("Person", { default_up: "[[People]]", folder: "", status_options: null });
@@ -206,15 +206,6 @@ describe("settings", () => {
     expect(parseKindConfig("X", {}, "Notes/Dots").folder).toBe("Notes/Dots");
     expect(shouldMove("Work/X.md", "Atlas/Dots", "Work")).toBe(false);
     expect(shouldMove("Efforts/X.md", "Atlas/Dots", "Work")).toBe(true);
-  });
-  it("effortStatus", () => {
-    const idea = parseKindConfig("Idea", { effort_status: "selected", effort_status_active: "working" });
-    expect(idea).toMatchObject({ effortStatus: "selected", effortStatusActive: "working" });
-    expect(effortStatus(idea, "on", ["on", "ongoing"])).toBe("working");
-    expect(effortStatus(idea, "ongoing", ["on", "ongoing"])).toBe("selected");
-    expect(effortStatus(parseKindConfig("C", { effort_status: "s" }), "on", ["on"])).toBe("s");
-    expect(effortStatus(parseKindConfig("C", {}), "on", ["on"])).toBeNull();
-    expect(effortStatus(null, "on", ["on"])).toBeNull();
   });
   it("fillTemplate", () => {
     expect(fillTemplate("[[{{date}}]] {{time}}: {{x}}", { date: "2026-11-19", time: "08:05" })).toBe("[[2026-11-19]] 08:05: {{x}}");

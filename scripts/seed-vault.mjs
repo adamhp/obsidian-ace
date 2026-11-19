@@ -75,7 +75,6 @@ for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()
 	out.title = name;
 	if (name === "Book") out.fields = ["author"];
 	if (name === "Map") out.template = "System/Templates/Map.md";
-	if (name === "Idea") { out.effort_status = "selected"; out.effort_status_active = "working"; }
 	put(`Atlas/Kinds/${f}`, out, kindBody);
 }
 put("System/Templates/Map.md", null, dotsBlock);
@@ -214,7 +213,7 @@ Open Settings, then ACE Actions. Change one thing at a time and put it back afte
 - [ ] Press Create starter kinds. Expect the notice "No kinds created; all 8 already there".
 - [ ] First run: set Kinds folder to \`Test/Kinds\` (empty). Press Create starter kinds. Expect "Created 8 kinds (…, Map)". Run New Map and expect the note in Atlas/Maps with a "## Dots" block. Then set Kinds folder back to \`Atlas/Kinds\`. The Test folder can be deleted.
 - [ ] Change Time format to "HH:mm:ss", run Log in an Effort. Expect the time stamp to show seconds. Then change it back to "HH:mm".
-- [ ] Open [[Plugin for daily review]], run Make effort and pick the first intensity. Expect the Idea to get status: working (from its Kind note: effort_status_active).
+- [ ] Open [[Plugin for daily review]], run Make effort and pick the first intensity. Expect a new Effort in Efforts, an effort link on the Idea, and its status unchanged.
 
 ## Existing structure
 - [[Software]], [[Culinary]], [[People]], [[Places]], [[Ideas]], [[Quotes]], [[Reading List]], [[Wishlist]]

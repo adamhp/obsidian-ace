@@ -9,8 +9,6 @@ export interface KindConfig {
   defaultUp: string | null;
   fields: string[];
   template: string | null;
-  effortStatus: string | null;
-  effortStatusActive: string | null;
 }
 
 export interface AceSettings {
@@ -174,8 +172,6 @@ export function parseKindConfig(
     defaultUp: linkTarget(f.default_up),
     fields: strList(f.fields),
     template: templatePath(f.template),
-    effortStatus: str(f.effort_status),
-    effortStatusActive: str(f.effort_status_active),
   };
 }
 
@@ -213,12 +209,6 @@ export function firstUrl(content: string): string | null {
 export function withFirst(items: string[], first: string | null): string[] {
   if (first === null || !items.includes(first)) return items;
   return [first, ...items.filter((x) => x !== first)];
-}
-
-export function effortStatus(kind: KindConfig | null, intensity: string, intensities: string[]): string | null {
-  if (kind === null) return null;
-  if (intensity === intensities[0] && kind.effortStatusActive !== null) return kind.effortStatusActive;
-  return kind.effortStatus;
 }
 
 // Replaces known {{key}} placeholders; unknown ones stay as written.

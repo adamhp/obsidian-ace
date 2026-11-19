@@ -22,8 +22,6 @@ export function starterKindFrontmatter(name: string, s: AceSettings): Record<str
       fm = {
         status_options: ["backlog", "selected", "working", "completed", "graveyard"],
         default_status: "backlog",
-        effort_status: "selected",
-        effort_status_active: "working",
       };
       break;
     case "Method":
@@ -69,8 +67,6 @@ default_status: status written if the note has none
 default_up: name of the Map to suggest first when picking a Map
 fields: extra blank properties added when creating a note or setting its kind
 template: path or wikilink to a plain markdown file whose body is copied into new notes of this kind
-effort_status: status set on a note when Make effort creates an Effort from it
-effort_status_active: status used instead when the intensity is the first (active) one
 %%
 
 ${NOTES_BLOCK}`;

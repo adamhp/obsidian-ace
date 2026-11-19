@@ -27,8 +27,6 @@ A kind exists if `<Kinds folder>/<name>.md` exists (default `Atlas/Kinds/<name>.
 | `status_options` | statuses offered; empty means don't ask | none |
 | `default_up` | name of the Map suggested first in the picker | none |
 | `fields` | extra blank properties added on create and set kind, e.g. `[author]` | none |
-| `effort_status` | status set on a note when Make effort creates an Effort from it | none |
-| `effort_status_active` | status used instead when the intensity is the first (active) one | none |
 | `template` | path or wikilink to a plain markdown file whose body is copied into new notes of this kind | none |
 
 ## Settings
@@ -54,7 +52,7 @@ The **Create starter kinds** button adds the standard Kind notes and the Map kin
 
 ## Migrating from the hard-coded version
 
-Add `effort_status: selected` and `effort_status_active: working` to your Idea Kind note.
+Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
 
 ## Filing rule
 

@@ -33,7 +33,8 @@ describe("starter", () => {
     expect(starterKindFrontmatter("Book", s)).toEqual({ is_source: true, folder: "Notes/Sources/Books", status_options: ["to read", "reading", "finished"], default_status: "to read", fields: ["author"], title: "Book" });
     expect(starterKindFrontmatter("Collection", s)).toEqual({ folder: "Notes/Dots", title: "Collection" });
     expect(starterKindFrontmatter("Concept", s)).toEqual({ title: "Concept" });
-    expect(starterKindFrontmatter("Idea", s)).toMatchObject({ default_status: "backlog", effort_status: "selected", effort_status_active: "working" });
+    expect(starterKindFrontmatter("Idea", s)).toMatchObject({ default_status: "backlog" });
+    expect(starterKindFrontmatter("Idea", s)).not.toHaveProperty("effort_status");
     expect(starterKindFrontmatter("Tool", s)).toEqual({ is_source: true, folder: "Notes/Sources/Tools", title: "Tool" });
     expect(starterKindFrontmatter("Article", s)).toEqual({ is_source: true, folder: "Notes/Sources/Articles", status_options: ["to read", "reading", "finished"], default_status: "to read", title: "Article" });
     expect(starterKindFrontmatter("Method", s)).toEqual({ is_source: true, folder: "Notes/Sources/Methods", title: "Method" });
@@ -45,10 +46,9 @@ describe("starter", () => {
   });
   it("kind note body", () => {
     expect(kindNoteBody(s)).toContain("blank = Notes/Dots");
-    expect(kindNoteBody(s)).toContain("effort_status_active");
   });
   it("kind note body mentions every key", () => {
-    for (const k of ["folder", "is_source", "default_status", "status_options", "default_up", "fields", "template", "effort_status", "effort_status_active"]) {
+    for (const k of ["folder", "is_source", "default_status", "status_options", "default_up", "fields", "template"]) {
       expect(kindNoteBody(s)).toContain(`${k}:`);
     }
   });
