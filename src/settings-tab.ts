@@ -136,7 +136,9 @@ export class AceSettingTab extends PluginSettingTab {
 					try {
 						const r = await this.ace.createStarterKinds();
 						new Notice(
-							`Created ${r.created.length} kinds (${r.created.join(", ")}); skipped ${r.skipped.length} (already there)`,
+							r.created.length === 0
+								? `No kinds created; all ${r.skipped.length} already there`
+								: `Created ${r.created.length} kinds (${r.created.join(", ")}); skipped ${r.skipped.length} (already there)`,
 						);
 					} catch (e) {
 						new Notice(`Create starter kinds failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
