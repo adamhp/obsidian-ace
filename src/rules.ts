@@ -1,0 +1,130 @@
+// Pure logic. Must not import from "obsidian" (runs under Vitest in Node).
+
+export interface KindConfig {
+  name: string;
+  folder: string;
+  isSource: boolean;
+  defaultStatus: string | null;
+  statusOptions: string[];
+  defaultUp: string | null;
+  fields: string[];
+  template: string | null;
+}
+
+export const KINDS_FOLDER = "Atlas/Kinds";
+export const MAPS_FOLDER = "Atlas/Maps";
+export const DEFAULT_FOLDER = "Atlas/Dots";
+export const EFFORTS_FOLDER = "Efforts";
+export const INTENSITIES = ["on", "ongoing", "simmering", "sleeping"] as const;
+export type Intensity = (typeof INTENSITIES)[number];
+
+function str(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== "string" && typeof v !== "number" && typeof v !== "boolean") return null;
+  const s = String(v).trim();
+  return s === "" ? null : s;
+}
+
+function strList(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((x) => str(x)).filter((x): x is string => x !== null);
+}
+
+export function linkTarget(value: unknown): string | null {
+  const first = Array.isArray(value) ? value[0] : value;
+  let s = str(first);
+  if (s === null) return null;
+  const m = /^\[\[(.*)\]\]$/.exec(s);
+  if (m) s = m[1];
+  s = s.split("|")[0].split("#")[0].trim();
+  s = s.slice(s.lastIndexOf("/") + 1).replace(/\.md$/i, "").trim();
+  return s === "" ? null : s;
+}
+
+export function linkList(value: unknown): string[] {
+  const items = Array.isArray(value) ? value : [value];
+  const out: string[] = [];
+  for (const item of items) {
+    const s = str(item);
+    if (s === null) continue;
+    if (/^\[\[.*\]\]$/.test(s)) out.push(s);
+    else {
+      const t = linkTarget(s);
+      if (t !== null) out.push(`[[${t}]]`);
+    }
+  }
+  return out;
+}
+
+export function addLink(value: unknown, target: string): string[] {
+  const list = linkList(value);
+  if (list.some((l) => linkTarget(l)?.toLowerCase() === target.toLowerCase())) return list;
+  return [...list, `[[${target}]]`];
+}
+
+function templatePath(v: unknown): string | null {
+  const s = str(v);
+  if (s === null) return null;
+  const m = /^\[\[(.*)\]\]$/.exec(s);
+  let p = (m ? m[1] : s).split("|")[0].split("#")[0].trim();
+  if (p === "") return null;
+  if (!/\.md$/i.test(p)) p += ".md";
+  return p;
+}
+
+export function parseKindConfig(name: string, fm: Record<string, unknown> | undefined): KindConfig {
+  const f = fm ?? {};
+  const folder = (str(f.folder) ?? "").replace(/\/+$/, "");
+  const src = f.is_source;
+  return {
+    name,
+    folder: folder === "" ? DEFAULT_FOLDER : folder,
+    isSource: src === true || (typeof src === "string" && src.trim().toLowerCase() === "true"),
+    defaultStatus: str(f.default_status),
+    statusOptions: strList(f.status_options),
+    defaultUp: linkTarget(f.default_up),
+    fields: strList(f.fields),
+    template: templatePath(f.template),
+  };
+}
+
+export function cleanName(raw: string): string {
+  return raw.replace(/[\\/:*?"<>|#^[\]]/g, "").trim();
+}
+
+export function isTaken(name: string, basenames: Iterable<string>): boolean {
+  const n = name.toLowerCase();
+  for (const b of basenames) if (b.toLowerCase() === n) return true;
+  return false;
+}
+
+export function isUnder(path: string, folder: string): boolean {
+  return path.startsWith(folder + "/");
+}
+
+export function shouldMove(path: string, folder: string): boolean {
+  if (isUnder(path, EFFORTS_FOLDER)) return false;
+  const i = path.lastIndexOf("/");
+  const parent = i < 0 ? "" : path.slice(0, i);
+  return parent !== folder;
+}
+
+export function firstUrl(content: string): string | null {
+  const body = content.replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, "");
+  const m = /https?:\/\/[^\s)\]>"']+/.exec(body);
+  return m ? m[0] : null;
+}
+
+export function withFirst(items: string[], first: string | null): string[] {
+  if (first === null || !items.includes(first)) return items;
+  return [first, ...items.filter((x) => x !== first)];
+}
+
+export function ideaStatus(intensity: Intensity): "working" | "selected" {
+  return intensity === "on" ? "working" : "selected";
+}
+
+export function logStamp(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `[[${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}]] ${p(d.getHours())}:${p(d.getMinutes())}: `;
+}
