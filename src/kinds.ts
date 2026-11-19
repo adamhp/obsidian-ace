@@ -62,7 +62,7 @@ function titlePart(v: unknown): string {
 }
 
 export function fillTitle(template: string, answers: Record<string, unknown>): string {
-  const filled = template.replace(/\{\{(\w+)\}\}/g, (m, k: string) =>
+  const filled = template.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (m, k: string) =>
     Object.prototype.hasOwnProperty.call(answers, k) ? titlePart(answers[k]) : m);
   return cleanName(filled).replace(/\s+/g, " ").trim();
 }
@@ -106,23 +106,34 @@ function setOrDelete(fm: Record<string, unknown>, key: string, value: unknown, e
   else fm[key] = value;
 }
 
-export function applyDraft(fm: Record<string, unknown>, draft: KindDraft): void {
-  const before = strList(fm.fields);
+function same(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+// Writes only the keys whose draft value differs from `initial`, so a lossy
+// parse (a scalar `fields`, a numeric default, a quoted link) is never written back.
+export function applyDraft(fm: Record<string, unknown>, draft: KindDraft, initial: KindDraft): void {
+  if (draft.folder !== initial.folder) setOrDelete(fm, "folder", draft.folder, draft.folder === "");
+  if (draft.isSource !== initial.isSource) setOrDelete(fm, "is_source", true, !draft.isSource);
+  if (draft.defaultUp !== initial.defaultUp) {
+    setOrDelete(fm, "default_up", draft.defaultUp, draft.defaultUp === null || draft.defaultUp === "");
+  }
   const names = draft.fields.map((f) => f.name);
-  setOrDelete(fm, "folder", draft.folder, draft.folder === "");
-  setOrDelete(fm, "is_source", true, !draft.isSource);
-  setOrDelete(fm, "default_up", draft.defaultUp, draft.defaultUp === null || draft.defaultUp === "");
-  setOrDelete(fm, "fields", names, names.length === 0);
-  setOrDelete(fm, "title_template", draft.titleTemplate, draft.titleTemplate === "");
-  setOrDelete(fm, "template", draft.template, draft.template === "");
-  for (const x of before) {
+  const oldNames = initial.fields.map((f) => f.name);
+  if (!same(names, oldNames)) setOrDelete(fm, "fields", names, names.length === 0);
+  if (draft.titleTemplate !== initial.titleTemplate) {
+    setOrDelete(fm, "title_template", draft.titleTemplate, draft.titleTemplate === "");
+  }
+  if (draft.template !== initial.template) setOrDelete(fm, "template", draft.template, draft.template === "");
+  for (const x of oldNames) {
     if (names.includes(x)) continue;
     delete fm[`${x}_options`];
     delete fm[`${x}_default`];
   }
   for (const f of draft.fields) {
-    setOrDelete(fm, `${f.name}_options`, f.options, f.options.length === 0);
-    setOrDelete(fm, `${f.name}_default`, f.default, f.default === null || f.default === "");
+    const old = initial.fields.find((o) => o.name === f.name) ?? { name: f.name, options: [], default: null };
+    if (!same(f.options, old.options)) setOrDelete(fm, `${f.name}_options`, f.options, f.options.length === 0);
+    if (f.default !== old.default) setOrDelete(fm, `${f.name}_default`, f.default, f.default === null || f.default === "");
   }
 }
 
@@ -146,7 +157,7 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
     }
   }
   const names = draft.fields.map((f) => f.name);
-  for (const m of draft.titleTemplate.matchAll(/\{\{(\w+)\}\}/g)) {
+  for (const m of draft.titleTemplate.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)) {
     if (!names.includes(m[1])) out.push(`Title template uses {{${m[1]}}}, which isn't a field.`);
   }
   if (draft.template.trim() !== "") {
@@ -155,7 +166,11 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
   }
   for (const key of Object.keys(fm)) {
     const m = /^default_(.+)$/.exec(key);
-    if (m && key !== "default_up") out.push(`${key} looks like an old key. Rename it to ${m[1]}_default.`);
+    if (m && key !== "default_up") {
+      out.push(isEmptyValue(fm[key])
+        ? `${key} is an old, empty key. Delete it.`
+        : `${key} looks like an old key. Rename it to ${m[1]}_default.`);
+    }
   }
   for (const key of Object.keys(fm)) {
     const m = /^(.+)_(options|default)$/.exec(key);

@@ -80,15 +80,23 @@ export class Ace {
 			.filter((f) => f !== own && usesKind(this.fm(f).kind, name));
 	}
 
-	async deleteKind(file: TFile): Promise<number> {
+	// Removes `kind` from every note using it. The Kind note is trashed only if all succeeded.
+	async deleteKind(file: TFile): Promise<{ updated: number; failed: string[] }> {
 		const users = this.notesUsingKind(file.basename);
+		let updated = 0;
+		const failed: string[] = [];
 		for (const f of users) {
-			await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {
-				delete fm.kind;
-			});
+			try {
+				await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {
+					delete fm.kind;
+				});
+				updated++;
+			} catch {
+				failed.push(f.basename);
+			}
 		}
-		await this.app.fileManager.trashFile(file);
-		return users.length;
+		if (failed.length === 0) await this.app.fileManager.trashFile(file);
+		return { updated, failed };
 	}
 
 	maps(): TFile[] {

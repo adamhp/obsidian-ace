@@ -2,6 +2,7 @@ import { Notice } from "obsidian";
 import { AceCommand } from "./types";
 import { askFields, askKindDetails } from "./shared";
 import { pick } from "../ui";
+import { isEmptyValue } from "../kinds";
 import { addLink, firstUrl, linkList, withFirst } from "../rules";
 
 export const setKind: AceCommand = {
@@ -35,7 +36,7 @@ export const setKind: AceCommand = {
 			fm.kind = `[[${kind.name}]]`;
 			fm.up = d.map ? addLink(fm.up, d.map) : linkList(fm.up);
 			for (const f of kind.fields) {
-				if (f in answers) fm[f] = answers[f];
+				if (f in answers && isEmptyValue(fm[f])) fm[f] = answers[f];
 				else if (!(f in fm)) fm[f] = null;
 			}
 			if (d.url) fm.source = d.url;

@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, Modal, Notice, Setting, TFile, TFolder } from "obsidian";
+import { AbstractInputSuggest, App, Modal, Notice, Setting, TFile, TFolder, getFrontMatterInfo, parseYaml } from "obsidian";
 import type { Ace } from "./vault";
 import { FieldDraft, KindDraft, applyDraft, draftFromFrontmatter, fieldNameError, kindProblems, propType } from "./kinds";
 import { cleanName, isTaken } from "./rules";
@@ -37,9 +37,9 @@ function move<T>(list: T[], from: number, to: number): void {
 }
 
 export class KindEditorModal extends Modal {
-	private draft: KindDraft;
-	private fm: Record<string, unknown>;
-	private initial: string;
+	private draft!: KindDraft;
+	private fm: Record<string, unknown> = {};
+	private initialDraft!: KindDraft;
 	private types: Record<string, string> = {};
 	private problemsEl!: HTMLElement;
 
@@ -49,12 +49,21 @@ export class KindEditorModal extends Modal {
 		private onDone: () => void,
 	) {
 		super(ace.app);
-		this.fm = ace.fm(file);
-		this.draft = draftFromFrontmatter(this.fm);
-		this.initial = JSON.stringify(this.draft);
 	}
 
 	async onOpen(): Promise<void> {
+		// Read from disk: the metadata cache can lag behind a save or a hand edit.
+		try {
+			const text = await this.app.vault.read(this.file);
+			const parsed: unknown = parseYaml(getFrontMatterInfo(text).frontmatter);
+			this.fm = parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+		} catch (e) {
+			new Notice(`Couldn't read ${this.file.basename}: ${e instanceof Error ? e.message : String(e)}`, 10000);
+			this.close();
+			return;
+		}
+		this.draft = draftFromFrontmatter(this.fm);
+		this.initialDraft = structuredClone(this.draft);
 		this.types = await this.ace.propTypes();
 		this.render();
 	}
@@ -64,7 +73,7 @@ export class KindEditorModal extends Modal {
 	}
 
 	private dirty(): boolean {
-		return JSON.stringify(this.draft) !== this.initial;
+		return JSON.stringify(this.draft) !== JSON.stringify(this.initialDraft);
 	}
 
 	private render(): void {
@@ -95,11 +104,13 @@ export class KindEditorModal extends Modal {
 			t.setValue(d.isSource).onChange((v) => (d.isSource = v)),
 		);
 		const maps = this.ace.maps().map((m) => m.basename);
-		if (d.defaultUp !== null && d.defaultUp !== "" && !maps.includes(d.defaultUp)) maps.unshift(d.defaultUp);
+		const up = d.defaultUp;
+		const mapMatch = up === null || up === "" ? undefined : maps.find((m) => m.toLowerCase() === up.toLowerCase());
+		if (up !== null && up !== "" && mapMatch === undefined) maps.unshift(up);
 		new Setting(el).setName("Default Map").setDesc("Offered first when picking a Map.").addDropdown((dd) => {
 			dd.addOption("", "(none)");
 			for (const m of maps) dd.addOption(m, m);
-			dd.setValue(d.defaultUp ?? "").onChange((v) => {
+			dd.setValue(mapMatch ?? d.defaultUp ?? "").onChange((v) => {
 				d.defaultUp = v === "" ? null : v;
 				this.renderProblems();
 			});
@@ -138,10 +149,15 @@ export class KindEditorModal extends Modal {
 		this.problemsEl = el.createDiv({ cls: "ace-problems" });
 		this.renderProblems();
 
-		new Setting(el)
-			.addButton((b) => b.setButtonText("Open note").onClick(() => void this.openNote()))
-			.addButton((b) => b.setButtonText("Rename").onClick(() => void this.rename()))
-			.addButton((b) => b.setButtonText("Delete").setWarning().onClick(() => void this.remove()))
+		const isMap = this.file.basename.toLowerCase() === "map";
+		if (isMap) el.createEl("p", { text: "Map is part of ACE and can't be renamed or deleted.", cls: "setting-item-description" });
+		const bar = new Setting(el).addButton((b) => b.setButtonText("Open note").onClick(() => void this.openNote()));
+		if (!isMap) {
+			bar
+				.addButton((b) => b.setButtonText("Rename").onClick(() => void this.rename()))
+				.addButton((b) => b.setButtonText("Delete").setWarning().onClick(() => void this.remove()));
+		}
+		bar
 			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
 			.addButton((b) => b.setButtonText("Save").setCta().onClick(() => void this.save()));
 	}
@@ -177,6 +193,7 @@ export class KindEditorModal extends Modal {
 				.addExtraButton((b) => b.setIcon("trash").setTooltip("Remove option").onClick(() => this.change(() => f.options.splice(i, 1))));
 		});
 		const def = new Setting(box).setName("Default");
+		if (propType(this.types, f.name) === "checkbox") def.setDesc("true or false");
 		if (f.options.length === 0) {
 			def.addText((t) =>
 				t.setValue(f.default ?? "").onChange((v) => {
@@ -220,7 +237,10 @@ export class KindEditorModal extends Modal {
 	private renderProblems(): void {
 		const el = this.problemsEl;
 		el.empty();
-		const list = kindProblems(this.draft, this.fm, this.ace.problemContext());
+		// Check what Save would write, so a field just removed doesn't still warn.
+		const result = structuredClone(this.fm);
+		applyDraft(result, this.draft, this.initialDraft);
+		const list = kindProblems(this.draft, result, this.ace.problemContext());
 		if (list.length === 0) return;
 		new Setting(el).setHeading().setName("Problems");
 		const ul = el.createEl("ul", { cls: "mod-warning" });
@@ -228,8 +248,14 @@ export class KindEditorModal extends Modal {
 	}
 
 	private async save(): Promise<void> {
+		if (!this.dirty()) {
+			this.close();
+			return;
+		}
 		try {
-			await this.app.fileManager.processFrontMatter(this.file, (fm: Record<string, unknown>) => applyDraft(fm, this.draft));
+			await this.app.fileManager.processFrontMatter(this.file, (fm: Record<string, unknown>) =>
+				applyDraft(fm, this.draft, this.initialDraft),
+			);
 		} catch (e) {
 			new Notice(`Save failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
 			return;
@@ -279,8 +305,17 @@ export class KindEditorModal extends Modal {
 		);
 		if (!ok) return;
 		try {
-			const count = await this.ace.deleteKind(this.file);
-			new Notice(`Deleted the ${name} kind; ${count} notes now have no kind.`);
+			const r = await this.ace.deleteKind(this.file);
+			if (r.failed.length > 0) {
+				new Notice(
+					`Updated ${r.updated} of ${r.updated + r.failed.length} notes; ${r.failed.length} failed (${r.failed.join(", ")}). The ${name} kind was kept.`,
+					10000,
+				);
+				this.close();
+				this.onDone();
+				return;
+			}
+			new Notice(`Deleted the ${name} kind; ${r.updated} ${r.updated === 1 ? "note now has" : "notes now have"} no kind.`);
 		} catch (e) {
 			new Notice(`Delete failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
 			return;

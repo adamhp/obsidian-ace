@@ -84,6 +84,9 @@ for (const f of fs.readdirSync(kindsDir).filter((x) => x.endsWith(".md")).sort()
 	put(`Atlas/Kinds/${f}`, out, kindBody);
 }
 put("System/Templates/Map.md", null, dotsBlock);
+// Dedicated kinds for the walkthrough (new files only; put() never overwrites without --force).
+put("Atlas/Kinds/Gadget.md", { title: "Gadget", folder: "Atlas/Dots", fields: ["colour"] }, kindBody);
+put("Atlas/Kinds/Label.md", { title: "Label", folder: "Atlas/Dots", fields: ["note"], title_template: "{{note}}" }, kindBody);
 // Obsidian property types for the dev vault (only if absent; put() would also honour --force).
 const typesPath = path.join(vault, ".obsidian/types.json");
 if (!fs.existsSync(typesPath)) {
@@ -169,6 +172,10 @@ add("Efforts/Garden Planner/Planting Calendar.md", { kind: L("Collection") }, "S
 add("Efforts/Garden Planner/Watering notes.md", null, "Plain note inside an Effort folder, no kind.");
 add("Efforts/Sourdough Starter.md", { intensity: "simmering", from: L("Sourdough experiment") }, "Started from [[Sourdough experiment]].\n\n## Next steps\n\n- [ ] Feed the starter\n");
 
+// For the delete-kind step: one note writes the kind in lowercase.
+add("Atlas/Dots/Gadget One.md", { kind: L("Gadget"), up: [L("Software")], colour: "red" }, "Uses the Gadget kind.\n");
+add("Atlas/Dots/Gadget Two.md", { kind: "[[gadget]]", up: [L("Software")], colour: "blue" }, "Kind is written in lowercase.\n");
+
 // Messy notes
 add("Inbox/Raw thought.md", null, "Maybe write something about how notes link together.\n");
 add("Inbox/Cool article.md", null, "Worth reading later: https://example.com/cool-article\n");
@@ -188,17 +195,20 @@ Try each command from the command palette (Ctrl+P, "ACE Actions: ..."). Tick the
 ## New note / New Map
 - [ ] Run New note, pick Concept, type "Trial note", then pick a Map (or "(no Map)"). Expect Atlas/Dots/Trial note.md to open with kind [[Concept]].
 - [ ] Run New note, pick Drink, type "Old Fashioned". Expect a refusal in the name prompt because the name clashes (Atlas/Dots/Old Fashioned.md).
-- [ ] Run New note, pick Person. Expect questions for first name, last name and last contacted (a date picker). Answer "Ada", "Lovelace", a date. Expect Ada Lovelace.md with last_contacted: <date>. A note by that name is already seeded in Atlas/Dots, so expect a clash refusal; answer "Ada", "Byron" instead to see the file made.
+- [ ] Run New note, pick Person. Expect questions for first name, last name and last contacted (a date picker). Answer "Ada", "Lovelace", a date. Expect Ada Lovelace.md with last_contacted: <date>. A note named Ada Lovelace is already seeded in Atlas/Dots, so after the last answer expect to land at the name prompt (prefilled "Ada Lovelace") because of the clash. Change it to "Ada Byron" and expect the file to be made.
+- [ ] Run New note, pick Label. Its title template is {{note}}; leave the "note" answer blank. Expect the name prompt to appear, because the template comes out blank.
+- [ ] Run New note, pick Person, answer the first question, then press Escape partway through the questions. Expect no note to be created anywhere.
 - [ ] Run New Map, type "Hobbies", then pick a Map or "(no Map)". Expect Atlas/Maps/Hobbies.md with kind [[Map]] and a Dots base.
 
 ## Set kind
-Each run asks: kind, then Map (pick one or "(no Map)"), then the kind's fields (status, author, ...; a field already set on the note is not asked), then a link (source kinds without a source).
+Each run asks: kind, then Map (pick one or "(no Map)"), then a link (source kinds without a source), then the kind's fields (status, author, ...; a field already set on the note is not asked).
 - [ ] Open [[Inbox/Cool article]] then Set kind then Article. Expect the link pre-filled from the URL in the text, status choices led by "to read", and the note moved to Atlas/Sources/Articles.
 - [ ] Open [[Inbox/Raw thought]] then Set kind then Concept. Expect kind [[Concept]] and a move to Atlas/Dots.
 - [ ] Open [[Inbox/Scalar up]] then Set kind then Concept, pick "(no Map)". Expect up to stay as a one-item list ["[[Software]]"].
 - [ ] Open [[Inbox/Old Fashioned]] then Set kind then Drink. Expect kind set but the file stays in Inbox, with a notice "not moved: Atlas/Dots/Old Fashioned.md already exists".
 - [ ] Open [[Inbox/Book idea]] then Set kind then Book. Expect an empty author field and a move to Atlas/Sources/Books.
-- [ ] Open a note that already has status set, then Set kind then Book. Expect status not to be asked again.
+- [ ] Open [[Ratatouille]] (it already has status: watched), then Set kind then Book. Expect status not to be asked again and to stay "watched", while author is asked.
+- [ ] Open [[Inbox/Meeting notes]], run Set kind then Concept, then press Escape partway through (after the Map, or midway through the field questions). Expect no notice, no move, and no property added to the note.
 - [ ] Open [[Loose note]] then Set kind then Person. Expect it to be filed into the Person kind folder (Atlas/Dots unless the kind says otherwise).
 
 ## Add to Map
@@ -228,6 +238,8 @@ Open Settings, then ACE Actions, then Kinds. Each kind has an Edit button; click
 - [ ] Edit Book, change the folder, press Cancel. Expect the Book note unchanged.
 - [ ] Press New kind, name it "Recipe Card". Expect the editor to open on a new Kind note. Press Rename, name it "Card". Expect Atlas/Kinds/Card.md.
 - [ ] Open Card in the editor, press Delete. Expect a confirmation saying 0 notes use it, then the Notice "Deleted the Card kind; 0 notes now have no kind." and Card.md in the trash.
+- [ ] Open Gadget in the editor and check its usage: two seeded notes use it ([[Gadget One]] written \`[[Gadget]]\` and [[Gadget Two]] written \`[[gadget]]\`). Press Delete. Expect the confirmation to say 2 notes use it, then the Notice "Deleted the Gadget kind; 2 notes now have no kind." Open both notes and expect only the \`kind\` property gone (up, colour and the body unchanged). Gadget.md is in the trash.
+- [ ] Open the Map kind in the editor. Expect no Rename or Delete buttons and the line "Map is part of ACE and can't be renamed or deleted." Other edits still save.
 - [ ] Open the Book note, add \`default_status: x\` by hand to its properties, then open the Book editor. Expect the Problems line "default_status looks like an old key. Rename it to status_default." Remove the key afterwards.
 
 ## Settings

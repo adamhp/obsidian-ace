@@ -20,6 +20,12 @@ export class AceSettingTab extends PluginSettingTab {
 		private ace: Ace,
 	) {
 		super(app, plugin);
+		// Refresh the Kinds list once the cache catches up after a Save or New kind.
+		this.plugin.registerEvent(
+			this.app.metadataCache.on("changed", (file) => {
+				if (file.parent?.path === this.s.kindsFolder && this.containerEl.isShown()) this.update();
+			}),
+		);
 	}
 
 	private get s(): AceSettings {

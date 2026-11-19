@@ -47,6 +47,9 @@ describe("fillTitle", () => {
     expect(fillTitle("{{x}}: {{y}}", { x: ["p", "q"] })).toBe("p, q {{y}}");
     expect(fillTitle("{{ok}}", { ok: true })).toBe("yes");
   });
+  it("fills hyphenated and spaced placeholders", () => {
+    expect(fillTitle("{{first-name}} {{ last name }}", { "first-name": "Ada", "last name": "Lovelace" })).toBe("Ada Lovelace");
+  });
 });
 
 describe("fieldNameError", () => {
@@ -70,14 +73,39 @@ describe("draft", () => {
     const fm: Record<string, unknown> = { title: "Book", folder: "Atlas/Sources/Books", is_source: true, default_up: "Reading List",
       fields: ["status", "author"], status_options: ["to read", "done"], status_default: "to read", extra: 1 };
     const d = draftFromFrontmatter(fm);
+    const d0 = structuredClone(d);
     expect(d).toEqual({ folder: "Atlas/Sources/Books", isSource: true, defaultUp: "Reading List",
       fields: [{ name: "status", options: ["to read", "done"], default: "to read" }, { name: "author", options: [], default: null }],
       titleTemplate: "", template: "" });
     d.fields = d.fields.filter((f) => f.name !== "status");
     d.isSource = false;
     d.defaultUp = null;
-    applyDraft(fm, d);
+    applyDraft(fm, d, d0);
     expect(fm).toEqual({ title: "Book", folder: "Atlas/Sources/Books", fields: ["author"], extra: 1 });
+  });
+  it("unchanged draft leaves lossy shapes alone", () => {
+    const shapes: Record<string, unknown>[] = [
+      { fields: "author" },
+      { fields: ["x"], x_default: 5 },
+      { default_up: "[[People]]" },
+      { is_source: "yes" },
+      { fields: ["x"], x_options: [1, 2] },
+      { fields: ["a", "b"], a_options: ["p"], b_default: true, title_template: "{{a}}", template: "T.md" },
+    ];
+    for (const fm of shapes) {
+      const orig = structuredClone(fm);
+      const d0 = draftFromFrontmatter(fm);
+      applyDraft(fm, structuredClone(d0), d0);
+      expect(fm).toEqual(orig);
+    }
+  });
+  it("changing one default changes only that key", () => {
+    const fm: Record<string, unknown> = { fields: ["a", "b"], a_default: 5, b_default: "x", default_up: "[[People]]" };
+    const d0 = draftFromFrontmatter(fm);
+    const d = structuredClone(d0);
+    d.fields[1].default = "y";
+    applyDraft(fm, d, d0);
+    expect(fm).toEqual({ fields: ["a", "b"], a_default: 5, b_default: "y", default_up: "[[People]]" });
   });
 });
 
@@ -96,6 +124,14 @@ describe("kindProblems", () => {
       "default_status looks like an old key. Rename it to status_default.",
       "priority_options is set, but priority isn't a field.",
     ]);
+  });
+  it("checks hyphenated and spaced placeholders", () => {
+    const d = { folder: "", isSource: false, defaultUp: null, fields: [{ name: "first-name", options: [], default: null }], titleTemplate: "{{first-name}} {{ nick name }}", template: "" };
+    expect(kindProblems(d, {}, ctx)).toEqual(["Title template uses {{nick name}}, which isn't a field."]);
+  });
+  it("empty old default key says delete", () => {
+    const d = { folder: "", isSource: false, defaultUp: null, fields: [], titleTemplate: "", template: "" };
+    expect(kindProblems(d, { default_x: "" }, ctx)).toEqual(["default_x is an old, empty key. Delete it."]);
   });
   it("blank default is unset", () => {
     const d = { folder: "", isSource: false, defaultUp: null, fields: [{ name: "s", options: ["a"], default: " " }, { name: "t", options: ["a"], default: "" }], titleTemplate: "", template: "" };
