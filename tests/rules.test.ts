@@ -1,23 +1,23 @@
 import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
-  isUnder, shouldMove, resolveStatus, firstUrl, withFirst,
+  isUnder, shouldMove, firstUrl, withFirst,
   normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, intensityError, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
   it("parses full config", () => {
     expect(parseKindConfig("Book", { is_source: "true", status_options: ["to read","reading","finished"], default_status: "to read", folder: "Atlas/Sources/Books/", fields: ["author"] }))
-      .toEqual({ name: "Book", folder: "Atlas/Sources/Books", isSource: true, defaultStatus: "to read", statusOptions: ["to read","reading","finished"], defaultUp: null, fields: ["author"], template: null });
+      .toEqual({ name: "Book", folder: "Atlas/Sources/Books", isSource: true, defaultUp: null, fields: ["author"], template: null, titleTemplate: null, fieldOptions: {}, fieldDefaults: { author: null } });
   });
   it("defaults", () => {
-    expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultStatus: null, statusOptions: [], defaultUp: null, fields: [], template: null });
+    expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultUp: null, fields: [], template: null, titleTemplate: null, fieldOptions: {}, fieldDefaults: {} });
   });
   it("handles empty/null and links", () => {
     const c = parseKindConfig("Person", { default_up: "[[People]]", folder: "", status_options: null });
     expect(c.defaultUp).toBe("People");
     expect(c.folder).toBe("Atlas/Dots");
-    expect(c.statusOptions).toEqual([]);
+    expect(c.fieldOptions).toEqual({});
   });
   it("template", () => {
     expect(parseKindConfig("Map", { template: "[[System/Templates/Map]]" }).template).toBe("System/Templates/Map.md");
@@ -30,7 +30,7 @@ describe("parseKindConfig", () => {
   });
   it("drops empties in arrays", () => {
     expect(parseKindConfig("A", { fields: ["x", "", null], status_options: "nope" }).fields).toEqual(["x"]);
-    expect(parseKindConfig("A", { status_options: "nope" }).statusOptions).toEqual([]);
+    expect(parseKindConfig("A", { fields: ["status"], status_options: "nope" }).fieldOptions).toEqual({});
   });
 });
 
@@ -110,25 +110,6 @@ describe("withFirst", () => {
   });
 });
 
-import { statusChoices } from "../src/rules";
-describe("statusChoices", () => {
-  const labels = (c: { label: string }[]) => c.map((x) => x.label);
-  it("current in options goes first", () => {
-    expect(labels(statusChoices(["a", "b"], "b", "a"))).toEqual(["b", "a", "(no status)"]);
-  });
-  it("no current: default first", () => {
-    expect(labels(statusChoices(["a", "b"], null, "b"))).toEqual(["b", "a", "(no status)"]);
-  });
-  it("no current, no default: none first", () => {
-    expect(labels(statusChoices(["a", "b"], null, null))).toEqual(["(no status)", "a", "b"]);
-  });
-  it("current outside options: keep first with null value, despite default", () => {
-    const c = statusChoices(["a", "b"], "weird", "a");
-    expect(labels(c)).toEqual(["(keep weird)", "a", "b", "(no status)"]);
-    expect(c[0].value).toBeNull();
-  });
-});
-
 describe("nested YAML links", () => {
   it("linkTarget reads nested one-element array", () => {
     expect(linkTarget([["Book"]])).toBe("Book");
@@ -158,23 +139,6 @@ describe("parseKindConfig folder slashes", () => {
     expect(parseKindConfig("A", { folder: "/Atlas/Dots/" }).folder).toBe("Atlas/Dots");
     expect(parseKindConfig("A", { folder: "/Atlas/Dots" }).folder).toBe("Atlas/Dots");
   });
-});
-
-describe("status keep vs none", () => {
-  it("keep flag only on keep choice", () => {
-    const c = statusChoices(["a"], "weird", null);
-    expect(c[0].keep).toBe(true);
-    expect(c[c.length - 1].keep).toBeFalsy();
-  });
-});
-
-describe("resolveStatus", () => {
-  it("explicit choice wins", () => expect(resolveStatus(true, "b", "a")).toBe("b"));
-  it("(no status) after question: no default", () => expect(resolveStatus(true, null, "a")).toBeNull());
-  it("no question: default", () => expect(resolveStatus(false, null, "a")).toBe("a"));
-  it("no question: existing status kept", () => expect(resolveStatus(false, null, "a", "x")).toBeNull());
-  it("no question, empty existing: default", () => expect(resolveStatus(false, null, "a", "")).toBe("a"));
-  it("no default: null", () => expect(resolveStatus(false, null, null)).toBeNull());
 });
 
 describe("settings", () => {

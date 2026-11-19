@@ -4,11 +4,14 @@ export interface KindConfig {
   name: string;
   folder: string;
   isSource: boolean;
-  defaultStatus: string | null;
-  statusOptions: string[];
   defaultUp: string | null;
   fields: string[];
   template: string | null;
+  titleTemplate: string | null;
+  // Only fields that have options.
+  fieldOptions: Record<string, string[]>;
+  // Every field; null when unset.
+  fieldDefaults: Record<string, string | null>;
 }
 
 export interface AceSettings {
@@ -94,14 +97,14 @@ export function normalizeSettings(raw: unknown): AceSettings {
   };
 }
 
-function str(v: unknown): string | null {
+export function str(v: unknown): string | null {
   if (v === null || v === undefined) return null;
   if (typeof v !== "string" && typeof v !== "number" && typeof v !== "boolean") return null;
   const s = String(v).trim();
   return s === "" ? null : s;
 }
 
-function strList(v: unknown): string[] {
+export function strList(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.map((x) => str(x)).filter((x): x is string => x !== null);
 }
@@ -154,7 +157,7 @@ export function addLink(value: unknown, target: string): unknown[] {
   return [...list, `[[${target}]]`];
 }
 
-function templatePath(v: unknown): string | null {
+export function templatePath(v: unknown): string | null {
   const s = str(v);
   if (s === null) return null;
   const m = /^\[\[(.*)\]\]$/.exec(s);
@@ -172,15 +175,24 @@ export function parseKindConfig(
   const f = fm ?? {};
   const folder = (str(f.folder) ?? "").replace(/^\/+/, "").replace(/\/+$/, "");
   const src = f.is_source;
+  const fields = strList(f.fields);
+  const fieldOptions: Record<string, string[]> = {};
+  const fieldDefaults: Record<string, string | null> = {};
+  for (const x of fields) {
+    const opts = strList(f[`${x}_options`]);
+    if (opts.length > 0) fieldOptions[x] = opts;
+    fieldDefaults[x] = str(f[`${x}_default`]);
+  }
   return {
     name,
     folder: folder === "" ? defaultFolder : folder,
     isSource: src === true || (typeof src === "string" && src.trim().toLowerCase() === "true"),
-    defaultStatus: str(f.default_status),
-    statusOptions: strList(f.status_options),
     defaultUp: linkTarget(f.default_up),
-    fields: strList(f.fields),
+    fields,
     template: templatePath(f.template),
+    titleTemplate: str(f.title_template),
+    fieldOptions,
+    fieldDefaults,
   };
 }
 
@@ -223,43 +235,4 @@ export function withFirst(items: string[], first: string | null): string[] {
 // Replaces known {{key}} placeholders; unknown ones stay as written.
 export function fillTemplate(text: string, vars: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (m, k: string) => (Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m));
-}
-
-export interface StatusChoice {
-  label: string;
-  value: string | null;
-  // true for "(keep X)": the note's existing status stays; false/absent for "(no status)".
-  keep?: boolean;
-}
-
-// value null = write no status (keeps any existing one).
-export function statusChoices(
-  options: string[],
-  current: string | null,
-  defaultStatus: string | null,
-): StatusChoice[] {
-  const cur = current === null ? "" : current.trim();
-  const none: StatusChoice = { label: "(no status)", value: null };
-  const set = (s: string): StatusChoice => ({ label: s, value: s });
-  if (cur !== "" && !options.includes(cur)) {
-    return [{ label: `(keep ${cur})`, value: null, keep: true }, ...options.map(set), none];
-  }
-  const first = cur !== "" ? cur : defaultStatus;
-  const opts = withFirst(options, first);
-  if (first !== null && opts[0] === first) return [...opts.map(set), none];
-  return [none, ...opts.map(set)];
-}
-
-// Status to write for a new or re-kinded note. The kind default applies only when
-// no status question was asked; an explicit choice (including "(no status)") wins.
-export function resolveStatus(
-  asked: boolean,
-  chosen: string | null,
-  defaultStatus: string | null,
-  existing: unknown = null,
-): string | null {
-  if (chosen !== null) return chosen;
-  if (asked) return null;
-  const has = typeof existing === "string" ? existing.trim() !== "" : existing != null;
-  return has ? null : defaultStatus;
 }
