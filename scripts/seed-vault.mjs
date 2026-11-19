@@ -212,7 +212,7 @@ Asks name, then intensity, then shape.
 Open Settings, then ACE Actions. Change one thing at a time and put it back afterwards.
 - [ ] Change Efforts folder to "Projects", run New effort (any name, any intensity, Single note). Expect Projects/<name>.md. Then change Efforts folder back to "Efforts".
 - [ ] Press Create starter kinds. Expect the notice "No kinds created; all 8 already there".
-- [ ] First run: set Kinds folder to `Test/Kinds` (empty). Press Create starter kinds. Expect "Created 8 kinds (…, Map)". Run New Map and expect the note in Atlas/Maps with a "## Dots" block. Then set Kinds folder back to `Atlas/Kinds`. The Test folder can be deleted.
+- [ ] First run: set Kinds folder to \`Test/Kinds\` (empty). Press Create starter kinds. Expect "Created 8 kinds (…, Map)". Run New Map and expect the note in Atlas/Maps with a "## Dots" block. Then set Kinds folder back to \`Atlas/Kinds\`. The Test folder can be deleted.
 - [ ] Change Time format to "HH:mm:ss", run Log in an Effort. Expect the time stamp to show seconds. Then change it back to "HH:mm".
 - [ ] Open [[Plugin for daily review]], run Make effort and pick the first intensity. Expect the Idea to get status: working (from its Kind note: effort_status_active).
 
