@@ -172,10 +172,14 @@ export class Ace {
 	}
 
 	// Creates every kind's folder that doesn't exist yet. Returns the folders created.
-	async createMissingKindFolders(): Promise<string[]> {
-		const missing = [...new Set(this.kinds().map((k) => k.folder))].filter(
+	missingKindFolders(): string[] {
+		return [...new Set(this.kinds().map((k) => k.folder))].filter(
 			(f) => f !== "" && !(this.app.vault.getAbstractFileByPath(f) instanceof TFolder),
 		);
+	}
+
+	async createMissingKindFolders(): Promise<string[]> {
+		const missing = this.missingKindFolders();
 		for (const f of missing) await this.ensureFolder(f);
 		return missing;
 	}

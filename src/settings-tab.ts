@@ -270,11 +270,17 @@ export class AceSettingTab extends PluginSettingTab {
 				type: "group",
 				heading: "Kinds",
 				extraButtons: [
-					(b) =>
-						b
-							.setIcon("folder-plus")
+					(b) => {
+						b.setIcon("folder-plus")
 							.setTooltip("Create missing folders")
-							.onClick(() => void this.createMissingFolders()),
+							.onClick(() => void this.createMissingFolders());
+						const n = this.ace.missingKindFolders().length;
+						if (n > 0) {
+							b.extraSettingsEl.before(
+								createSpan({ cls: "ace-missing-count", text: `${n} missing ${n === 1 ? "folder" : "folders"}` }),
+							);
+						}
+					},
 				],
 				search: {
 					placeholder: "Filter kinds",
