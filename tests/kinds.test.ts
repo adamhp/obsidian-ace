@@ -56,6 +56,13 @@ describe("fieldNameError", () => {
     expect(fieldNameError("Author", ["author"])).toBe("Already a field.");
     expect(fieldNameError("status", [])).toBeNull();
   });
+  it("rejects every reserved name, any case", () => {
+    for (const n of ["kind", "up", "source", "effort", "intensity", "from"]) {
+      expect(fieldNameError(n, [])).toBe(`ACE writes ${n} itself.`);
+      expect(fieldNameError(n.toUpperCase(), [])).toBe(`ACE writes ${n.toUpperCase()} itself.`);
+    }
+    expect(fieldNameError("Kind", [])).toBe("ACE writes Kind itself.");
+  });
 });
 
 describe("draft", () => {
@@ -89,6 +96,10 @@ describe("kindProblems", () => {
       "default_status looks like an old key. Rename it to status_default.",
       "priority_options is set, but priority isn't a field.",
     ]);
+  });
+  it("blank default is unset", () => {
+    const d = { folder: "", isSource: false, defaultUp: null, fields: [{ name: "s", options: ["a"], default: " " }, { name: "t", options: ["a"], default: "" }], titleTemplate: "", template: "" };
+    expect(kindProblems(d, {}, ctx)).toEqual([]);
   });
   it("blank folder skipped", () => {
     expect(kindProblems({ folder: "", isSource: false, defaultUp: null, fields: [], titleTemplate: "", template: "" }, {}, ctx)).toEqual([]);

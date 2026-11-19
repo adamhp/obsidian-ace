@@ -3,7 +3,7 @@ import { cleanName, linkTarget, str, strList, templatePath } from "./rules";
 
 export type PropType = "text" | "number" | "checkbox" | "date" | "datetime" | "list";
 
-export const RESERVED_FIELDS: readonly string[] = ["up"];
+export const RESERVED_FIELDS: readonly string[] = ["kind", "up", "source", "effort", "intensity", "from"];
 
 const PROP_TYPES: Record<string, PropType> = {
   text: "text", number: "number", checkbox: "checkbox", date: "date", datetime: "datetime",
@@ -141,7 +141,7 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
     out.push(`Default Map "${up}" not found.`);
   }
   for (const f of draft.fields) {
-    if (f.default !== null && f.options.length > 0 && !f.options.includes(f.default)) {
+    if (f.default !== null && f.default.trim() !== "" && f.options.length > 0 && !f.options.includes(f.default)) {
       out.push(`Default for ${f.name} ("${f.default}") isn't one of its options.`);
     }
   }
