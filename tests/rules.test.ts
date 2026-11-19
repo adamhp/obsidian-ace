@@ -185,8 +185,12 @@ describe("settings", () => {
     expect(normalizeSettings({ intensities: [] }).intensities).toEqual(["on", "ongoing", "simmering", "sleeping"]);
     expect(normalizeSettings({ newEffortText: "", logFormat: "" })).toMatchObject({ newEffortText: "", logFormat: "[[{{date}}]] {{time}}: " });
   });
+  it("normalizeSettings keeps array items with commas whole", () => {
+    expect(normalizeSettings({ intensities: [" a,b ", "c", 5, "d{"] }).intensities).toEqual(["a,b", "c"]);
+  });
   it("parseIntensities", () => {
     expect(parseIntensities(" a ,b,,c|d ")).toEqual(["a", "b"]);
+    expect(parseIntensities("a{b,c}d,e#f,g,a/b")).toEqual(["g", "a/b"]);
   });
   it("kind folder and move params", () => {
     expect(parseKindConfig("X", {}, "Notes/Dots").folder).toBe("Notes/Dots");

@@ -54,12 +54,13 @@ function textSetting(v: unknown, def: string, allowEmpty: boolean): string {
   return v === "" && !allowEmpty ? def : v;
 }
 
-// Intensities become file names and links, so items with forbidden characters are dropped.
+// Intensities are stored in note properties and links, so items with [ ] { } : # | are dropped.
+function cleanIntensities(items: string[]): string[] {
+  return items.map((x) => x.trim()).filter((x) => x !== "" && !/[[\]{}:#|]/.test(x));
+}
+
 export function parseIntensities(text: string): string[] {
-  return text
-    .split(",")
-    .map((x) => x.trim())
-    .filter((x) => x !== "" && !/[\\/:*?"<>|#^[\]]/.test(x));
+  return cleanIntensities(text.split(","));
 }
 
 export function normalizeSettings(raw: unknown): AceSettings {
@@ -68,7 +69,7 @@ export function normalizeSettings(raw: unknown): AceSettings {
   let list: string[] = [];
   if (typeof r.intensities === "string") list = parseIntensities(r.intensities);
   else if (Array.isArray(r.intensities)) {
-    list = parseIntensities(r.intensities.filter((x): x is string => typeof x === "string").join(","));
+    list = cleanIntensities(r.intensities.filter((x): x is string => typeof x === "string"));
   }
   return {
     atlasFolder: folderSetting(r.atlasFolder, d.atlasFolder),
