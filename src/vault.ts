@@ -6,6 +6,7 @@ import {
 	parseKindConfig,
 	shouldMove,
 } from "./rules";
+import { parseTypes } from "./kinds";
 import {
 	STARTER_KINDS,
 	kindNoteBody,
@@ -23,6 +24,14 @@ export class Ace {
 	fm(file: TFile): Record<string, unknown> {
 		const f = this.app.metadataCache.getFileCache(file)?.frontmatter;
 		return f ? (f as Record<string, unknown>) : {};
+	}
+
+	async propTypes(): Promise<Record<string, string>> {
+		try {
+			return parseTypes(await this.app.vault.adapter.read(`${this.app.vault.configDir}/types.json`));
+		} catch {
+			return {};
+		}
 	}
 
 	kinds(): KindConfig[] {

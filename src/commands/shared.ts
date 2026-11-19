@@ -1,7 +1,8 @@
 import { Notice, TFile } from "obsidian";
 import { Ace } from "../vault";
-import { ask, pick } from "../ui";
-import { KindConfig, cleanName, isTaken, resolveStatus, statusChoices as statusChoicesOf, withFirst } from "../rules";
+import { ask, askValue, pick } from "../ui";
+import { KindConfig, cleanName, isTaken, withFirst } from "../rules";
+import { fillTitle, isEmptyValue, propType } from "../kinds";
 
 interface Choice<T> {
 	label: string;
@@ -18,8 +19,6 @@ async function choose<T>(
 
 export interface KindDetails {
 	map: string | null;
-	status: string | null;
-	statusAsked: boolean;
 	url: string | null;
 }
 
@@ -41,18 +40,6 @@ export async function askKindDetails(
 	const mapPick = await choose(ace, mapChoices, `Map for "${noteName}"`);
 	if (mapPick === null) return null;
 
-	// Status
-	let status: string | null = null;
-	let statusAsked = false;
-	if (kind.statusOptions.length > 0) {
-		const cur = typeof current.status === "string" ? current.status : null;
-		const statusChoices = statusChoicesOf(kind.statusOptions, cur, kind.defaultStatus);
-		const sp = await choose(ace, statusChoices, `Status for "${noteName}"`);
-		if (sp === null) return null;
-		status = sp.value;
-		statusAsked = true;
-	}
-
 	// Link
 	let url: string | null = null;
 	const src = current.source;
@@ -63,7 +50,26 @@ export async function askKindDetails(
 		url = a.trim() === "" ? null : a.trim();
 	}
 
-	return { map: mapPick.value, status, statusAsked, url };
+	return { map: mapPick.value, url };
+}
+
+export async function askFields(
+	ace: Ace,
+	kind: KindConfig,
+	current: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
+	const types = await ace.propTypes();
+	const out: Record<string, unknown> = {};
+	for (const f of kind.fields) {
+		if (!isEmptyValue(current[f])) continue;
+		const type = propType(types, f);
+		const def = kind.fieldDefaults[f] ?? null;
+		const initial: string | boolean = type === "checkbox" ? def === "true" : (def ?? "");
+		const a = await askValue(ace.app, `${f} for ${kind.name}`, type, initial, kind.fieldOptions[f]);
+		if (a === null) return null;
+		out[f] = a.value;
+	}
+	return out;
 }
 
 export function askNewName(ace: Ace, what: string, initial: string): Promise<string | null> {
@@ -81,17 +87,29 @@ export async function createOfKind(
 	kind: KindConfig,
 	fallbackBody = "",
 ): Promise<void> {
-	const name = await askNewName(ace, kind.name, "");
-	if (name === null) return;
-	const d = await askKindDetails(ace, kind, name, {});
+	let name: string | null = null;
+	if (kind.titleTemplate === null) {
+		name = await askNewName(ace, kind.name, "");
+		if (name === null) return;
+	}
+	const d = await askKindDetails(ace, kind, name ?? `new ${kind.name}`, {});
 	if (d === null) return;
+	const answers = await askFields(ace, kind, {});
+	if (answers === null) return;
+	if (name === null) {
+		const built = fillTitle(kind.titleTemplate ?? "", answers);
+		if (built === "" || isTaken(built, ace.basenames())) {
+			name = await askNewName(ace, kind.name, built);
+			if (name === null) return;
+		} else {
+			name = built;
+		}
+	}
 	const props: Record<string, unknown> = {
 		kind: `[[${kind.name}]]`,
 		up: d.map ? [`[[${d.map}]]`] : [],
 	};
-	for (const f of kind.fields) props[f] = null;
-	const status = resolveStatus(d.statusAsked, d.status, kind.defaultStatus);
-	if (status) props.status = status;
+	for (const f of kind.fields) props[f] = f in answers ? answers[f] : null;
 	if (kind.isSource) props.source = d.url;
 	const file: TFile = await ace.createNote(
 		kind.folder,

@@ -1,8 +1,8 @@
 import { Notice } from "obsidian";
 import { AceCommand } from "./types";
-import { askKindDetails } from "./shared";
+import { askFields, askKindDetails } from "./shared";
 import { pick } from "../ui";
-import { addLink, firstUrl, linkList, resolveStatus, withFirst } from "../rules";
+import { addLink, firstUrl, linkList, withFirst } from "../rules";
 
 export const setKind: AceCommand = {
 	id: "set-kind",
@@ -28,13 +28,16 @@ export const setKind: AceCommand = {
 		const guess = firstUrl(await ace.app.vault.cachedRead(file));
 		const d = await askKindDetails(ace, kind, file.basename, current, guess, file);
 		if (d === null) return;
+		const answers = await askFields(ace, kind, current);
+		if (answers === null) return;
 
 		await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 			fm.kind = `[[${kind.name}]]`;
 			fm.up = d.map ? addLink(fm.up, d.map) : linkList(fm.up);
-			for (const f of kind.fields) if (!(f in fm)) fm[f] = null;
-			const status = resolveStatus(d.statusAsked, d.status, kind.defaultStatus, fm.status);
-			if (status) fm.status = status;
+			for (const f of kind.fields) {
+				if (f in answers) fm[f] = answers[f];
+				else if (!(f in fm)) fm[f] = null;
+			}
 			if (d.url) fm.source = d.url;
 		});
 		const where = await ace.fileInto(file, kind.folder);
