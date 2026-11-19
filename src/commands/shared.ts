@@ -76,7 +76,11 @@ export function askNewName(ace: Ace, what: string, initial: string): Promise<str
 	}).then((v) => (v === null ? null : cleanName(v)));
 }
 
-export async function createOfKind(ace: Ace, kind: KindConfig): Promise<void> {
+export async function createOfKind(
+	ace: Ace,
+	kind: KindConfig,
+	fallbackBody = "",
+): Promise<void> {
 	const name = await askNewName(ace, kind.name, "");
 	if (name === null) return;
 	const d = await askKindDetails(ace, kind, name, {});
@@ -93,7 +97,7 @@ export async function createOfKind(ace: Ace, kind: KindConfig): Promise<void> {
 		kind.folder,
 		name,
 		props,
-		await ace.templateBody(kind),
+		(await ace.templateBody(kind)) || fallbackBody,
 	);
 	await ace.app.workspace.getLeaf(false).openFile(file);
 	new Notice(`New ${kind.name}: ${name}${d.map ? ` on ${d.map}` : ""}`);

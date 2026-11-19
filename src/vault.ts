@@ -6,6 +6,13 @@ import {
 	parseKindConfig,
 	shouldMove,
 } from "./rules";
+import {
+	STARTER_KINDS,
+	kindNoteBody,
+	mapKindBody,
+	mapKindFrontmatter,
+	starterKindFrontmatter,
+} from "./starter";
 
 export class Ace {
 	constructor(
@@ -90,6 +97,30 @@ export class Ace {
 			}
 		});
 		return file;
+	}
+
+	async ensureMapKind(): Promise<boolean> {
+		if (this.kind("Map")) return false;
+		const s = this.settings;
+		if (this.app.vault.getAbstractFileByPath(`${s.kindsFolder}/Map.md`)) return false;
+		await this.createNote(s.kindsFolder, "Map", mapKindFrontmatter(s), mapKindBody(s));
+		return true;
+	}
+
+	async createStarterKinds(): Promise<{ created: string[]; skipped: string[] }> {
+		const s = this.settings;
+		const created: string[] = [];
+		const skipped: string[] = [];
+		for (const name of STARTER_KINDS) {
+			if (this.kind(name) || this.app.vault.getAbstractFileByPath(`${s.kindsFolder}/${name}.md`)) {
+				skipped.push(name);
+				continue;
+			}
+			await this.createNote(s.kindsFolder, name, starterKindFrontmatter(name, s), kindNoteBody(s));
+			created.push(name);
+		}
+		(await this.ensureMapKind() ? created : skipped).push("Map");
+		return { created, skipped };
 	}
 
 	async templateBody(kind: KindConfig): Promise<string> {

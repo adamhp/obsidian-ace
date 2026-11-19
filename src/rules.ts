@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS: AceSettings = {
   timeFormat: "HH:mm",
 };
 
-function folderSetting(v: unknown, def: string): string {
+export function folderSetting(v: unknown, def: string): string {
   if (typeof v !== "string") return def;
   const s = v.trim().replace(/^\/+/, "").replace(/\/+$/, "").trim();
   return s === "" ? def : s;
