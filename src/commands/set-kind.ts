@@ -32,14 +32,15 @@ export const setKind: AceCommand = {
 		const answers = await askFields(ace, kind, current);
 		if (answers === null) return;
 
+		const p = ace.settings.props;
 		await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-			fm.kind = `[[${kind.name}]]`;
-			fm.up = d.map ? addLink(fm.up, d.map) : linkList(fm.up);
+			fm[p.kind] = `[[${kind.name}]]`;
+			fm[p.up] = d.map ? addLink(fm[p.up], d.map) : linkList(fm[p.up]);
 			for (const f of kind.fields) {
 				if (f in answers && isEmptyValue(fm[f])) fm[f] = answers[f];
 				else if (!(f in fm)) fm[f] = null;
 			}
-			if (d.url) fm.source = d.url;
+			if (d.url) fm[p.source] = d.url;
 		});
 		const where = await ace.fileInto(file, kind.folder);
 		new Notice(

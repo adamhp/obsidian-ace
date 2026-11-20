@@ -14,6 +14,19 @@ export interface KindConfig {
   fieldDefaults: Record<string, string | null>;
 }
 
+// The property names ACE writes on notes.
+export interface PropNames {
+  kind: string;
+  up: string;
+  source: string;
+  effort: string;
+  intensity: string;
+  from: string;
+}
+
+export const PROP_KEYS = ["kind", "up", "source", "effort", "intensity", "from"] as const;
+export type PropKey = (typeof PROP_KEYS)[number];
+
 export interface AceSettings {
   atlasFolder: string;
   kindsFolder: string;
@@ -27,6 +40,7 @@ export interface AceSettings {
   logFormat: string;
   dateFormat: string;
   timeFormat: string;
+  props: PropNames;
 }
 
 // Built-in effort bodies, used when no template file is set or it's missing.
@@ -46,7 +60,31 @@ export const DEFAULT_SETTINGS: AceSettings = {
   logFormat: "[[{{date}}]] {{time}}: ",
   dateFormat: "YYYY-MM-DD",
   timeFormat: "HH:mm",
+  props: { kind: "kind", up: "up", source: "source", effort: "effort", intensity: "intensity", from: "from" },
 };
+
+// Why a property name can't be used, or null if it can. `others` are the other ACE property names.
+export function propNameError(v: string, others: string[]): string | null {
+  const s = v.trim();
+  if (s === "") return "Enter a name.";
+  if (/[[\]{}:#|,"']/.test(s)) return "Avoid the characters [ ] { } : # | , \" '.";
+  if (others.some((x) => x.toLowerCase() === s.toLowerCase())) return `"${s}" is already used by another ACE property.`;
+  return null;
+}
+
+// Saved names are used only if every one is valid and they are all different.
+function normalizeProps(raw: unknown): PropNames {
+  const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const out = { ...DEFAULT_SETTINGS.props };
+  const seen: string[] = [];
+  for (const k of PROP_KEYS) {
+    const v = r[k] === undefined ? out[k] : r[k];
+    if (typeof v !== "string" || propNameError(v, seen) !== null) return { ...DEFAULT_SETTINGS.props };
+    out[k] = v.trim();
+    seen.push(out[k]);
+  }
+  return out;
+}
 
 export function folderSetting(v: unknown, def: string): string {
   if (typeof v !== "string") return def;
@@ -98,6 +136,7 @@ export function normalizeSettings(raw: unknown): AceSettings {
     logFormat: textSetting(r.logFormat, d.logFormat, false),
     dateFormat: textSetting(r.dateFormat, d.dateFormat, false),
     timeFormat: textSetting(r.timeFormat, d.timeFormat, false),
+    props: normalizeProps(r.props),
   };
 }
 

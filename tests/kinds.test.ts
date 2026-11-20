@@ -52,19 +52,21 @@ describe("fillTitle", () => {
   });
 });
 
+const R = ["kind", "up", "source", "effort", "intensity", "from"];
+
 describe("fieldNameError", () => {
   it("checks", () => {
-    expect(fieldNameError(" ", [])).toBe("Enter a name.");
-    expect(fieldNameError("up", [])).toBe("ACE writes up itself.");
-    expect(fieldNameError("Author", ["author"])).toBe("Already a field.");
-    expect(fieldNameError("status", [])).toBeNull();
+    expect(fieldNameError(" ", [], R)).toBe("Enter a name.");
+    expect(fieldNameError("up", [], R)).toBe("ACE writes up itself.");
+    expect(fieldNameError("Author", ["author"], R)).toBe("Already a field.");
+    expect(fieldNameError("status", [], R)).toBeNull();
   });
   it("rejects every reserved name, any case", () => {
     for (const n of ["kind", "up", "source", "effort", "intensity", "from"]) {
-      expect(fieldNameError(n, [])).toBe(`ACE writes ${n} itself.`);
-      expect(fieldNameError(n.toUpperCase(), [])).toBe(`ACE writes ${n.toUpperCase()} itself.`);
+      expect(fieldNameError(n, [], R)).toBe(`ACE writes ${n} itself.`);
+      expect(fieldNameError(n.toUpperCase(), [], R)).toBe(`ACE writes ${n.toUpperCase()} itself.`);
     }
-    expect(fieldNameError("Kind", [])).toBe("ACE writes Kind itself.");
+    expect(fieldNameError("Kind", [], R)).toBe("ACE writes Kind itself.");
   });
 });
 
@@ -111,7 +113,7 @@ describe("draft", () => {
 
 const texts = (ps: { text: string }[]) => ps.map((p) => p.text);
 describe("kindProblems", () => {
-  const ctx = { folderExists: (p: string) => p === "Atlas/Dots", fileExists: () => false, mapNames: ["People"] };
+  const ctx = { folderExists: (p: string) => p === "Atlas/Dots", fileExists: () => false, mapNames: ["People"], reserved: R };
   it("lists problems in order", () => {
     expect(texts(kindProblems(
       { folder: "Nope", isSource: false, defaultUp: "Ghost", fields: [{ name: "s", options: ["a"], default: "b" }], titleTemplate: "{{nick}}", template: "T.md" },
@@ -149,6 +151,20 @@ describe("kindProblems", () => {
   });
   it("blank folder skipped", () => {
     expect(texts(kindProblems({ folder: "", isSource: false, defaultUp: null, fields: [], titleTemplate: "", template: "" }, {}, ctx))).toEqual([]);
+  });
+});
+
+describe("renamed ACE properties", () => {
+  it("reserves the configured names, not the defaults", () => {
+    expect(fieldNameError("type", [], ["type", "parent"])).toBe("ACE writes type itself.");
+    expect(fieldNameError("kind", [], ["type", "parent"])).toBeNull();
+  });
+  it("flags a field that became an ACE property", () => {
+    const ctx = { folderExists: () => true, fileExists: () => true, mapNames: [], reserved: ["type"] };
+    const d = { folder: "", isSource: false, defaultUp: null, fields: [{ name: "Type", options: [], default: null }], titleTemplate: "", template: "" };
+    expect(kindProblems(d, {}, ctx).map((p) => p.text)).toEqual([
+      "Field Type is a property ACE writes itself. Rename the field, or change the property name in settings.",
+    ]);
   });
 });
 

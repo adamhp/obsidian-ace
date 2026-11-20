@@ -9,6 +9,6 @@ export const newMap: AceCommand = {
 	run: async (ace) => {
 		const { kind, made } = await ace.mapKind();
 		if (made) new Notice(`Created the Map kind note in ${ace.settings.kindsFolder}`);
-		await createOfKind(ace, kind, mapBody(ace.settings.atlasFolder));
+		await createOfKind(ace, kind, mapBody(ace.settings));
 	},
 };

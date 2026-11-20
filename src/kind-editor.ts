@@ -221,7 +221,7 @@ export class KindEditorModal extends Modal {
 
 	private async addField(): Promise<void> {
 		const names = this.draft.fields.map((f) => f.name);
-		const v = await ask(this.app, "New field", "", (x) => fieldNameError(x, names));
+		const v = await ask(this.app, "New field", "", (x) => fieldNameError(x, names, Object.values(this.ace.settings.props)));
 		if (v === null) return;
 		this.change(() => this.draft.fields.push({ name: v.trim(), options: [], default: null }));
 	}

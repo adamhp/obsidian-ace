@@ -16,7 +16,7 @@ export const addToMap: AceCommand = {
 		}
 		const map = await pick(ace.app, maps, (m) => m.basename, `Add "${file.basename}" to Map`);
 		if (map === null) return;
-		const already = linkList(ace.fm(file).up).some(
+		const already = linkList(ace.fm(file)[ace.settings.props.up]).some(
 			(l) => linkTarget(l)?.toLowerCase() === map.basename.toLowerCase(),
 		);
 		if (already) {
@@ -24,7 +24,8 @@ export const addToMap: AceCommand = {
 			return;
 		}
 		await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-			fm.up = addLink(fm.up, map.basename);
+			const up = ace.settings.props.up;
+			fm[up] = addLink(fm[up], map.basename);
 		});
 		new Notice(`${file.basename}: added to ${map.basename}`);
 	},

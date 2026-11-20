@@ -25,11 +25,11 @@ export const makeEffort: AceCommand = {
 			const effort = await ace.createNote(
 				s.effortsFolder,
 				name,
-				{ intensity, from: `[[${file.basename}]]` },
+				{ [s.props.intensity]: intensity, [s.props.from]: `[[${file.basename}]]` },
 				await ace.effortBody("make", { note: `[[${file.basename}]]` }),
 			);
 			await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-				fm.effort = addLink(fm.effort, name);
+				fm[s.props.effort] = addLink(fm[s.props.effort], name);
 			});
 			await ace.app.workspace.getLeaf(false).openFile(effort);
 			new Notice(`${file.basename}: created Effort "${name}" (${intensity})`);
@@ -37,7 +37,7 @@ export const makeEffort: AceCommand = {
 		}
 
 		await ace.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-			fm.intensity = intensity;
+			fm[s.props.intensity] = intensity;
 		});
 		let suffix = "";
 		if (!isUnder(file.path, s.effortsFolder)) {

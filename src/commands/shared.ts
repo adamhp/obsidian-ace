@@ -42,7 +42,7 @@ export async function askKindDetails(
 
 	// Link
 	let url: string | null = null;
-	const src = current.source;
+	const src = current[ace.settings.props.source];
 	const hasSource = typeof src === "string" ? src.trim() !== "" : src != null;
 	if (kind.isSource && !hasSource) {
 		const a = await ask(ace.app, "Link (optional)", urlGuess ?? "");
@@ -105,12 +105,13 @@ export async function createOfKind(
 			name = built;
 		}
 	}
+	const p = ace.settings.props;
 	const props: Record<string, unknown> = {
-		kind: `[[${kind.name}]]`,
-		up: d.map ? [`[[${d.map}]]`] : [],
+		[p.kind]: `[[${kind.name}]]`,
+		[p.up]: d.map ? [`[[${d.map}]]`] : [],
 	};
 	for (const f of kind.fields) props[f] = f in answers ? answers[f] : null;
-	if (kind.isSource) props.source = d.url;
+	if (kind.isSource) props[p.source] = d.url;
 	const file: TFile = await ace.createNote(
 		kind.folder,
 		name,

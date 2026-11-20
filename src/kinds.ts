@@ -3,8 +3,6 @@ import { cleanName, linkTarget, str, strList, templatePath } from "./rules";
 
 export type PropType = "text" | "number" | "checkbox" | "date" | "datetime" | "list";
 
-export const RESERVED_FIELDS: readonly string[] = ["kind", "up", "source", "effort", "intensity", "from"];
-
 const PROP_TYPES: Record<string, PropType> = {
   text: "text", number: "number", checkbox: "checkbox", date: "date", datetime: "datetime",
   multitext: "list", tags: "list", aliases: "list", list: "list",
@@ -67,10 +65,11 @@ export function fillTitle(template: string, answers: Record<string, unknown>): s
   return cleanName(filled).replace(/\s+/g, " ").trim();
 }
 
-export function fieldNameError(name: string, existing: string[]): string | null {
+// `reserved` are the property names ACE writes itself (settings, Property names).
+export function fieldNameError(name: string, existing: string[], reserved: string[]): string | null {
   const n = name.trim();
   if (n === "") return "Enter a name.";
-  if (RESERVED_FIELDS.includes(n.toLowerCase())) return `ACE writes ${n} itself.`;
+  if (reserved.some((r) => r.toLowerCase() === n.toLowerCase())) return `ACE writes ${n} itself.`;
   if (existing.some((e) => e.toLowerCase() === n.toLowerCase())) return "Already a field.";
   return null;
 }
@@ -141,6 +140,8 @@ export interface ProblemContext {
   folderExists(path: string): boolean;
   fileExists(path: string): boolean;
   mapNames: string[];
+  // The property names ACE writes itself.
+  reserved: string[];
 }
 
 // A missing thing the editor can create with one button.
@@ -166,6 +167,9 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
     out.push({ text: `Default Map "${up}" not found.`, fix: { type: "map", target: up } });
   }
   for (const f of draft.fields) {
+    if (ctx.reserved.some((r) => r.toLowerCase() === f.name.toLowerCase())) {
+      say(`Field ${f.name} is a property ACE writes itself. Rename the field, or change the property name in settings.`);
+    }
     if (f.default !== null && f.default.trim() !== "" && f.options.length > 0 && !f.options.includes(f.default)) {
       say(`Default for ${f.name} ("${f.default}") isn't one of its options.`);
     }

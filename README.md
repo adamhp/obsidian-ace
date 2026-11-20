@@ -52,6 +52,9 @@ The first row, **About ACE**, expands into a short guide to LYT, ACE, how this p
 | Log format | `[[{{date}}]] {{time}}: ` |
 | Date format | `YYYY-MM-DD` |
 | Time format | `HH:mm` |
+| Property names | `kind`, `up`, `source`, `effort`, `intensity`, `from` |
+
+**Property names** are the six properties the plugin writes on notes: the kind link, the Maps list, a source's link, a note's efforts, an effort's intensity, and the note an effort was made from. Each can be renamed. A blank name means the default. Two properties can't share a name, and a Kind can't have a field with one of these names. Renaming changes what the plugin reads and writes from then on. It does not rename the property in notes you already have, or in the views inside existing Map and Kind notes.
 
 The two effort templates are markdown files whose body (without properties) becomes a new effort's body. `{{date}}` and `{{time}}` are filled in with the Log formats, and in the Make effort template `{{note}}` becomes a link to the note you started from. While a template is blank or its file is missing, the built-in text is used; a missing file gets a **Create file** button that writes the built-in text there for you to edit.
 

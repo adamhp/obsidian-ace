@@ -28,7 +28,7 @@ export const newEffort: AceCommand = {
 		const file = await ace.createNote(
 			dir,
 			name,
-			{ intensity },
+			{ [s.props.intensity]: intensity },
 			await ace.effortBody("new"),
 		);
 		await ace.app.workspace.getLeaf(false).openFile(file);

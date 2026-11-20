@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
   isUnder, shouldMove, firstUrl, withFirst,
-  normalizeSettings, folderSetting, DEFAULT_SETTINGS, parseIntensities, intensityError, fillTemplate,
+  normalizeSettings, propNameError, folderSetting, DEFAULT_SETTINGS, parseIntensities, intensityError, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
@@ -149,6 +149,23 @@ describe("settings", () => {
     expect(normalizeSettings({ intensities: [] }).intensities).toEqual(["on", "ongoing", "simmering", "sleeping"]);
     expect(normalizeSettings({ newEffortText: "old", newEffortTemplate: " T/New.md ", logFormat: "" })).not.toHaveProperty("newEffortText");
     expect(normalizeSettings({ newEffortTemplate: " T/New.md ", logFormat: "" })).toMatchObject({ newEffortTemplate: "T/New.md", makeEffortTemplate: "", logFormat: "[[{{date}}]] {{time}}: " });
+  });
+  it("normalizeSettings property names", () => {
+    const d = DEFAULT_SETTINGS.props;
+    expect(normalizeSettings({}).props).toEqual(d);
+    expect(normalizeSettings({ props: { kind: " type ", up: "parent" } }).props).toEqual({ ...d, kind: "type", up: "parent" });
+    // Any bad or repeated name puts all six back to the defaults.
+    expect(normalizeSettings({ props: { kind: "up" } }).props).toEqual(d);
+    expect(normalizeSettings({ props: { kind: "" } }).props).toEqual(d);
+    expect(normalizeSettings({ props: { kind: "a:b" } }).props).toEqual(d);
+    expect(normalizeSettings({ props: { kind: 7 } }).props).toEqual(d);
+    expect(normalizeSettings({ props: "x" }).props).toEqual(d);
+  });
+  it("propNameError", () => {
+    expect(propNameError(" ", [])).toBe("Enter a name.");
+    expect(propNameError("a[b", [])).toContain("Avoid the characters");
+    expect(propNameError("Up", ["up"])).toBe('"Up" is already used by another ACE property.');
+    expect(propNameError("note type", ["up"])).toBeNull();
   });
   it("normalizeSettings bad input", () => {
     expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS);

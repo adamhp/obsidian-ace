@@ -56,7 +56,7 @@ export class Ace {
 	}
 
 	kindOf(file: TFile): KindConfig | null {
-		return this.kind(linkTarget(this.fm(file).kind));
+		return this.kind(linkTarget(this.fm(file)[this.settings.props.kind]));
 	}
 
 	kindFile(name: string): TFile | null {
@@ -73,6 +73,7 @@ export class Ace {
 			folderExists: (p) => this.app.vault.getAbstractFileByPath(p) instanceof TFolder,
 			fileExists: (p) => this.app.vault.getAbstractFileByPath(p) instanceof TFile,
 			mapNames: this.maps().map((f) => f.basename),
+			reserved: Object.values(this.settings.props),
 		};
 	}
 
@@ -84,10 +85,10 @@ export class Ace {
 		const own = this.kindFile(name);
 		return this.app.vault
 			.getMarkdownFiles()
-			.filter((f) => f !== own && usesKind(this.fm(f).kind, name));
+			.filter((f) => f !== own && usesKind(this.fm(f)[this.settings.props.kind], name));
 	}
 
-	// Removes `kind` from every note using it. The Kind note is trashed only if all succeeded.
+	// Removes the kind property from every note using it. The Kind note is trashed only if all succeeded.
 	async deleteKind(file: TFile): Promise<{ updated: number; failed: string[] }> {
 		const users = this.notesUsingKind(file.basename);
 		let updated = 0;
@@ -95,7 +96,7 @@ export class Ace {
 		for (const f of users) {
 			try {
 				await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {
-					delete fm.kind;
+					delete fm[this.settings.props.kind];
 				});
 				updated++;
 			} catch {
@@ -202,9 +203,10 @@ export class Ace {
 		if (cleanName(fix.target) !== fix.target) return `"${fix.target}" can't be used as a note name.`;
 		if (isTaken(fix.target, this.basenames())) return `A note named "${fix.target}" already exists.`;
 		const { kind } = await this.mapKind();
-		const props: Record<string, unknown> = { kind: "[[Map]]", up: [] };
+		const p = this.settings.props;
+		const props: Record<string, unknown> = { [p.kind]: "[[Map]]", [p.up]: [] };
 		for (const f of kind.fields) props[f] = null;
-		await this.createNote(kind.folder, fix.target, props, (await this.templateBody(kind)) || mapBody(this.settings.atlasFolder));
+		await this.createNote(kind.folder, fix.target, props, (await this.templateBody(kind)) || mapBody(this.settings));
 		return `Created the Map ${fix.target} in ${kind.folder}`;
 	}
 

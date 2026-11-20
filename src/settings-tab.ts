@@ -1,7 +1,7 @@
 import { App, Component, MarkdownRenderer, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
-import { AceSettings, DEFAULT_SETTINGS, cleanName, folderSetting, intensityError, isTaken, textSetting } from "./rules";
+import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
 import { ask } from "./ui";
 import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
@@ -13,6 +13,24 @@ type TextKey = "newEffortTemplate" | "makeEffortTemplate" | "logFormat" | "dateF
 const FOLDER_KEYS: readonly string[] = ["atlasFolder", "kindsFolder", "mapsFolder", "defaultFolder", "sourcesFolder", "effortsFolder"];
 // These may be blank; the other text settings fall back to their default.
 const BLANK_OK: readonly string[] = ["newEffortTemplate", "makeEffortTemplate"];
+// Control keys for the property names are "prop.kind", "prop.up", and so on.
+const PROP_PREFIX = "prop.";
+const PROP_LABELS: Record<PropKey, string> = {
+	kind: "Kind property",
+	up: "Map property",
+	source: "Source property",
+	effort: "Effort property",
+	intensity: "Intensity property",
+	from: "Started-from property",
+};
+const PROP_DESCS: Record<PropKey, string> = {
+	kind: "Links a note to its Kind note.",
+	up: "Lists the Maps a note is on.",
+	source: "Holds the link of a note whose kind is a source.",
+	effort: "On a note, links to the efforts made from it.",
+	intensity: "Holds an effort's intensity.",
+	from: "On an effort, links to the note it was made from.",
+};
 
 export class AceSettingTab extends PluginSettingTab {
 	// Kept so the guide stays open when the tab redraws.
@@ -38,10 +56,25 @@ export class AceSettingTab extends PluginSettingTab {
 
 	// Settings are changed in place: Ace holds the same object.
 	getControlValue(key: string): unknown {
+		if (key.startsWith(PROP_PREFIX)) return this.s.props[key.slice(PROP_PREFIX.length) as PropKey];
 		return this.s[key as keyof AceSettings];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key.startsWith(PROP_PREFIX)) {
+			const k = key.slice(PROP_PREFIX.length) as PropKey;
+			// Blank means the default name, as the placeholder shows.
+			const v = typeof value === "string" && value.trim() !== "" ? value : DEFAULT_SETTINGS.props[k];
+			const error = propNameError(v, PROP_KEYS.filter((o) => o !== k).map((o) => this.s.props[o]));
+			// A name that can't be used is not saved: the old one stays in effect.
+			if (error !== null) {
+				new Notice(`${PROP_LABELS[k]}: ${error} Still using "${this.s.props[k]}".`);
+				return;
+			}
+			this.s.props[k] = v.trim();
+			await this.plugin.saveSettings();
+			return;
+		}
 		if (FOLDER_KEYS.includes(key)) {
 			const k = key as FolderKey;
 			this.s[k] = folderSetting(value, DEFAULT_SETTINGS[k]);
@@ -251,6 +284,24 @@ export class AceSettingTab extends PluginSettingTab {
 						"make",
 						"Make effort template",
 						"Body of an effort made from a note. {{note}} becomes a link to that note; {{date}} and {{time}} are filled in. Blank uses the built-in text.",
+					),
+				],
+			},
+			{
+				type: "group",
+				heading: "Property names",
+				items: [
+					{
+						name: "These are the properties ACE writes on your notes.",
+						desc: "Changing a name affects what ACE reads and writes from now on. Properties already in your notes, and views in existing Map and Kind notes, keep the old name until you rename them (Obsidian's All properties view can rename a property everywhere).",
+						searchable: false,
+					},
+					...PROP_KEYS.map(
+						(k): SettingDefinition => ({
+							name: PROP_LABELS[k],
+							desc: PROP_DESCS[k],
+							control: { type: "text", key: PROP_PREFIX + k, placeholder: DEFAULT_SETTINGS.props[k] },
+						}),
 					),
 				],
 			},

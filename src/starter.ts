@@ -37,7 +37,7 @@ export function starterKindFrontmatter(name: string, s: AceSettings): Record<str
   return { ...fm, title: name };
 }
 
-const NOTES_BLOCK = `## Notes
+const notesBlock = (up: string) => `## Notes
 
 \`\`\`base
 filters:
@@ -48,13 +48,13 @@ views:
     name: All
     order:
       - file.name
-      - up
+      - ${up}
       - file.mtime
   - type: cards
     name: Cards
     order:
       - file.name
-      - up
+      - ${up}
 \`\`\`
 `;
 
@@ -62,7 +62,7 @@ export function kindNoteBody(s: AceSettings): string {
   return `%%
 Kind note keys (frontmatter above). All are optional.
 folder: where new notes of this kind are filed (blank = ${s.defaultFolder})
-is_source: true to ask for a link and write "source"
+is_source: true to ask for a link and write "${s.props.source}"
 default_up: name of the Map to suggest first when picking a Map
 fields: properties asked for when you create a note of this kind (or set its kind)
 <field>_options: list of choices for that field
@@ -71,7 +71,7 @@ title_template: builds the note name from fields, e.g. {{first_name}} {{last_nam
 template: path or wikilink to a plain markdown file whose body is copied into new notes of this kind
 %%
 
-${NOTES_BLOCK}`;
+${notesBlock(s.props.up)}`;
 }
 
 export function mapKindFrontmatter(s: AceSettings): Record<string, unknown> {
@@ -82,7 +82,7 @@ export function mapKindBody(s: AceSettings): string {
   return `## Overview
 
 A Map is a note that gathers related notes around a topic.
-Notes join a Map by listing it in their \`up\` property.
+Notes join a Map by listing it in their \`${s.props.up}\` property.
 The Map shows them in a view, and you can add your own thinking around it.
 Maps can sit on other Maps.
 Use Add to Map or Set kind to link notes.
@@ -90,8 +90,9 @@ Use Add to Map or Set kind to link notes.
 ${kindNoteBody(s)}`;
 }
 
-export function mapBody(atlasFolder: string): string {
-  const expr = atlasFolder.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+export function mapBody(s: AceSettings): string {
+  const kind = s.props.kind;
+  const expr = s.atlasFolder.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const folder = `file.inFolder("${expr}")`.replace(/'/g, "''");
   return `## Dots
 
@@ -104,17 +105,17 @@ views:
   - type: table
     name: By kind
     groupBy:
-      property: kind
+      property: ${kind}
       direction: ASC
     order:
       - file.name
-      - kind
+      - ${kind}
       - file.mtime
   - type: cards
     name: Cards
     order:
       - file.name
-      - kind
+      - ${kind}
 \`\`\`
 `;
 }

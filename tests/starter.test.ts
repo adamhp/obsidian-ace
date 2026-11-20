@@ -56,8 +56,12 @@ describe("starter", () => {
     expect(kindNoteBody(s)).not.toContain("default_status");
   });
   it("mapBody", () => {
-    expect(mapBody('My "Atlas"')).toContain(`- 'file.inFolder("My \\"Atlas\\"")'`);
-    expect(mapBody("Bob's #notes")).toContain(`- 'file.inFolder("Bob''s #notes")'`);
-    expect(mapBody("Atlas")).toBe(EXPECTED_DOTS);
+    expect(mapBody({ ...DEFAULT_SETTINGS, atlasFolder: 'My "Atlas"' })).toContain(`- 'file.inFolder("My \\"Atlas\\"")'`);
+    expect(mapBody({ ...DEFAULT_SETTINGS, atlasFolder: "Bob's #notes" })).toContain(`- 'file.inFolder("Bob''s #notes")'`);
+    expect(mapBody(DEFAULT_SETTINGS)).toBe(EXPECTED_DOTS);
+    const renamed = { ...DEFAULT_SETTINGS, props: { ...DEFAULT_SETTINGS.props, kind: "type", up: "parent" } };
+    expect(mapBody(renamed)).toContain("property: type");
+    expect(mapBody(renamed)).not.toContain("- kind");
+    expect(kindNoteBody(renamed)).toContain("- parent");
   });
 });
