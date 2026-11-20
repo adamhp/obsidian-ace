@@ -6,6 +6,7 @@ import { addLink, linkList, linkTarget } from "../rules";
 export const addToMap: AceCommand = {
 	id: "add-to-map",
 	name: "Add to Map",
+	needsNote: true,
 	run: async (ace) => {
 		const file = ace.currentFile();
 		if (!file) return;

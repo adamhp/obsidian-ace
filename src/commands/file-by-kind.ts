@@ -5,6 +5,7 @@ import { linkTarget } from "../rules";
 export const fileByKind: AceCommand = {
 	id: "file-by-kind",
 	name: "File by kind",
+	needsNote: true,
 	run: async (ace) => {
 		const file = ace.currentFile();
 		if (!file) return;

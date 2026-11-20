@@ -8,6 +8,7 @@ import { addLink, firstUrl, linkList, withFirst } from "../rules";
 export const setKind: AceCommand = {
 	id: "set-kind",
 	name: "Set kind",
+	needsNote: true,
 	run: async (ace) => {
 		const file = ace.currentFile();
 		if (!file) return;

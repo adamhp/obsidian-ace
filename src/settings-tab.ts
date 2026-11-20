@@ -1,4 +1,4 @@
-import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
+import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFile, normalizePath } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
@@ -91,7 +91,7 @@ export class AceSettingTab extends PluginSettingTab {
 		}
 		if (FOLDER_KEYS.includes(key)) {
 			const k = key as FolderKey;
-			this.s[k] = folderSetting(value, DEFAULT_SETTINGS[k]);
+			this.s[k] = normalizePath(folderSetting(value, DEFAULT_SETTINGS[k]));
 		} else {
 			const k = key as TextKey;
 			this.s[k] = textSetting(value, DEFAULT_SETTINGS[k], BLANK_OK.includes(k)).trim();

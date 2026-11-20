@@ -7,6 +7,7 @@ import { addLink, isUnder } from "../rules";
 export const makeEffort: AceCommand = {
 	id: "make-effort",
 	name: "Make effort",
+	needsNote: true,
 	run: async (ace) => {
 		const file = ace.currentFile();
 		if (!file) return;

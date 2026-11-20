@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice, TFile, TFolder, moment } from "obsidian";
+import { App, MarkdownView, Notice, TFile, TFolder, moment, normalizePath } from "obsidian";
 import {
 	AceSettings,
 	KindConfig,
@@ -42,12 +42,17 @@ export class Ace {
 		}
 	}
 
+	// A Kind note's folder and template are typed by the person, so clean them up as paths.
+	private withPaths(k: KindConfig): KindConfig {
+		return { ...k, folder: normalizePath(k.folder), template: k.template === null ? null : normalizePath(k.template) };
+	}
+
 	kinds(): KindConfig[] {
 		return this.app.vault
 			.getMarkdownFiles()
 			.filter((f) => f.parent?.path === this.settings.kindsFolder)
 			.sort((a, b) => a.basename.localeCompare(b.basename))
-			.map((f) => parseKindConfig(f.basename, this.fm(f), this.settings.defaultFolder));
+			.map((f) => this.withPaths(parseKindConfig(f.basename, this.fm(f), this.settings.defaultFolder)));
 	}
 
 	kind(name: string | null): KindConfig | null {
@@ -71,8 +76,8 @@ export class Ace {
 
 	problemContext(): ProblemContext {
 		return {
-			folderExists: (p) => this.app.vault.getAbstractFileByPath(p) instanceof TFolder,
-			fileExists: (p) => this.app.vault.getAbstractFileByPath(p) instanceof TFile,
+			folderExists: (p) => this.app.vault.getAbstractFileByPath(normalizePath(p)) instanceof TFolder,
+			fileExists: (p) => this.app.vault.getAbstractFileByPath(normalizePath(p)) instanceof TFile,
 			mapNames: this.maps().map((f) => f.basename),
 			reserved: Object.values(this.settings.props),
 		};
@@ -234,7 +239,7 @@ export class Ace {
 		const s = this.settings;
 		const made = await this.ensureMapKind();
 		// The metadata cache lags a just-created note, so build the kind from the known frontmatter.
-		const kind = (made ? null : this.kind("Map")) ?? parseKindConfig("Map", mapKindFrontmatter(s), s.defaultFolder);
+		const kind = (made ? null : this.kind("Map")) ?? this.withPaths(parseKindConfig("Map", mapKindFrontmatter(s), s.defaultFolder));
 		return { kind, made };
 	}
 
@@ -255,16 +260,18 @@ export class Ace {
 	async fixProblem(fix: ProblemFix): Promise<string> {
 		const vault = this.app.vault;
 		if (fix.type === "folder") {
-			if (vault.getAbstractFileByPath(fix.target)) return `"${fix.target}" already exists.`;
-			await this.ensureFolder(fix.target);
-			return `Created folder ${fix.target}`;
+			const target = normalizePath(fix.target);
+			if (vault.getAbstractFileByPath(target)) return `"${target}" already exists.`;
+			await this.ensureFolder(target);
+			return `Created folder ${target}`;
 		}
 		if (fix.type === "file") {
-			if (vault.getAbstractFileByPath(fix.target)) return `"${fix.target}" already exists.`;
-			const slash = fix.target.lastIndexOf("/");
-			if (slash > 0) await this.ensureFolder(fix.target.slice(0, slash));
-			await vault.create(fix.target, "");
-			return `Created ${fix.target}`;
+			const target = normalizePath(fix.target);
+			if (vault.getAbstractFileByPath(target)) return `"${target}" already exists.`;
+			const slash = target.lastIndexOf("/");
+			if (slash > 0) await this.ensureFolder(target.slice(0, slash));
+			await vault.create(target, "");
+			return `Created ${target}`;
 		}
 		if (cleanName(fix.target) !== fix.target) return `"${fix.target}" can't be used as a note name.`;
 		if (isTaken(fix.target, this.basenames())) return `A note named "${fix.target}" already exists.`;
@@ -317,7 +324,8 @@ export class Ace {
 
 	// The template path a setting points at (".md" added), or null when blank.
 	effortTemplatePath(which: "new" | "make"): string | null {
-		return templatePath(which === "new" ? this.settings.newEffortTemplate : this.settings.makeEffortTemplate);
+		const p = templatePath(which === "new" ? this.settings.newEffortTemplate : this.settings.makeEffortTemplate);
+		return p === null ? null : normalizePath(p);
 	}
 
 	// Body for a new effort: the template file's body, or the built-in text when it's unset or missing.

@@ -72,14 +72,15 @@ export async function askFields(
 	return out;
 }
 
-export function askNewName(ace: Ace, what: string, initial: string): Promise<string | null> {
+export async function askNewName(ace: Ace, what: string, initial: string): Promise<string | null> {
 	const taken = ace.basenames();
-	return ask(ace.app, `Name of new ${what}`, initial, (v) => {
+	const v = await ask(ace.app, `Name of new ${what}`, initial, (v) => {
 		const n = cleanName(v);
 		if (n === "") return "Name cannot be empty.";
 		if (isTaken(n, taken)) return `A note named "${n}" already exists.`;
 		return null;
-	}).then((v) => (v === null ? null : cleanName(v)));
+	});
+	return v === null ? null : cleanName(v);
 }
 
 export async function createOfKind(

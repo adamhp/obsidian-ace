@@ -4,7 +4,7 @@ An Obsidian plugin for the ACE note structure. It creates typed notes ("kinds"),
 
 ## Commands
 
-No default hotkeys. Assign your own in Obsidian settings.
+No default hotkeys. Assign your own in Obsidian settings. Set kind, Add to Map, File by kind and Make effort act on the open note, so the command palette only offers them while a note is open. Log needs an editor.
 
 - **New note…**: pick a kind, name, Map, and status or link if the kind asks. Creates and opens the note.
 - **New Map**: New note with kind Map preselected. If no Map kind note exists, it creates one first.
