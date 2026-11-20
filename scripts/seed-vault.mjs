@@ -206,6 +206,9 @@ add("Inbox/Book idea.md", null, "A book about gardening for lazy people. Could b
 add("Inbox/Movie to see.md", null, "Recommended by a friend: a heist film.\n");
 add("Atlas/Sources/Misfiled Book.md", { kind: L("Book"), status: "to read", author: "Unknown" }, "Kind is Book but it is not in Atlas/Sources/Books. Try File by kind.\n");
 add("Inbox/Has type already.md", { kind: L("Concept"), type: "draft" }, "Has both `kind` and `type`. Renaming the Kind property to `type` must skip this note.\n");
+// A dozen more notes with both `kind` and `type`, to show how Check notes lists notes it won't rename.
+for (const [i, name] of ["Anchor", "Beacon", "Compass", "Dynamo", "Ember", "Fjord", "Glacier", "Harbour", "Isthmus", "Juniper", "Kestrel", "Lantern"].entries())
+	add(`Inbox/Both names/${name}.md`, { kind: L(i % 2 ? "Idea" : "Concept"), type: i % 3 ? "draft" : "final" }, "Has both `kind` and `type`.\n");
 add("Loose note.md", null, "A note sitting in the vault root.\n");
 
 // Home
