@@ -1,4 +1,4 @@
-import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
+import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
@@ -434,10 +434,11 @@ export class AceSettingTab extends PluginSettingTab {
 		}
 		const out: string[] = [];
 		if (todo.length > 0 || both.length > 0) {
+			let danger = false;
 			const ok = await confirm(
 				this.app,
 				todo.length > 0 ? "Rename properties in existing notes?" : "Nothing to rename",
-				(el) => {
+				(el, close) => {
 					if (todo.length > 0) {
 						el.createEl("p", { text: "Only the property's name changes. Its value stays. Views inside existing Map and Kind notes are not changed." });
 						const ul = el.createEl("ul", { cls: "ace-check-list" });
@@ -455,9 +456,23 @@ export class AceSettingTab extends PluginSettingTab {
 						const ul = el.createEl("ul", { cls: "ace-check-list ace-check-scroll" });
 						for (const f of [...t.files].sort((a, b) => a.path.localeCompare(b.path))) ul.createEl("li", { text: f.path.replace(/\.md$/i, "") });
 					}
+					const zone = el.createDiv({ cls: "ace-danger-zone" });
+					new Setting(zone)
+						.setName("Danger zone: remove all old properties")
+						.setDesc("Deletes every old property, with its value, instead of renaming it. Shows what will be deleted and asks you to type yes.")
+						.addButton((b) =>
+							b.setButtonText("Remove all old").setWarning().onClick(() => {
+								danger = true;
+								close();
+							}),
+						);
 				},
 				todo.length > 0 ? "Rename" : "OK",
 			);
+			if (danger) {
+				await this.removeAllOld();
+				return;
+			}
 			if (!ok && todo.length > 0) return;
 			for (const t of todo) {
 				try {
@@ -534,14 +549,6 @@ export class AceSettingTab extends PluginSettingTab {
 							});
 							this.renameWarnEl = setting.descEl.createDiv({ cls: "ace-rename-warning mod-warning" });
 							this.refreshRenameWarning();
-						},
-					},
-					{
-						name: "Danger zone: remove all old properties",
-						desc: "Deletes every old property, with its value, from every note that still has one: the names you changed above, and old keys on Kind notes. Use Check notes first; it keeps the values. Shows what will be deleted and asks you to type yes.",
-						render: (setting) => {
-							setting.nameEl.addClass("mod-warning");
-							setting.addButton((b) => b.setButtonText("Remove all old").setWarning().onClick(() => void this.removeAllOld()));
 						},
 					},
 				],

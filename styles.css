@@ -52,3 +52,14 @@
 .ace-rename-warning {
 	margin-top: var(--size-4-1);
 }
+
+.ace-danger-zone {
+	margin-top: var(--size-4-4);
+	padding: 0 var(--size-4-3);
+	border: 1px solid var(--background-modifier-error);
+	border-radius: var(--radius-m);
+}
+
+.ace-danger-zone .setting-item-name {
+	color: var(--text-error);
+}
