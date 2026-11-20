@@ -1,10 +1,11 @@
-import { App, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
+import { App, Component, MarkdownRenderer, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, cleanName, folderSetting, intensityError, isTaken, textSetting } from "./rules";
 import { ask } from "./ui";
 import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
+import { aboutMarkdown } from "./about";
 
 type FolderKey = "atlasFolder" | "kindsFolder" | "mapsFolder" | "defaultFolder" | "sourcesFolder" | "effortsFolder";
 type TextKey = "newEffortTemplate" | "makeEffortTemplate" | "logFormat" | "dateFormat" | "timeFormat";
@@ -14,6 +15,9 @@ const FOLDER_KEYS: readonly string[] = ["atlasFolder", "kindsFolder", "mapsFolde
 const BLANK_OK: readonly string[] = ["newEffortTemplate", "makeEffortTemplate"];
 
 export class AceSettingTab extends PluginSettingTab {
+	// Kept so the guide stays open when the tab redraws.
+	private aboutOpen = false;
+
 	constructor(
 		app: App,
 		private plugin: AcePlugin,
@@ -208,8 +212,26 @@ export class AceSettingTab extends PluginSettingTab {
 		this.update();
 	}
 
+	private about(): SettingDefinition {
+		return {
+			name: "About ACE",
+			aliases: ["readme", "help", "guide", "LYT"],
+			render: (setting) => {
+				const details = setting.descEl.createEl("details", { cls: "ace-about" });
+				details.open = this.aboutOpen;
+				details.createEl("summary", { text: "How LYT and ACE work, and how this plugin implements them" });
+				details.addEventListener("toggle", () => (this.aboutOpen = details.open));
+				const owner = new Component();
+				owner.load();
+				void MarkdownRenderer.render(this.app, aboutMarkdown(this.s), details.createDiv(), "", owner);
+				return () => owner.unload();
+			},
+		};
+	}
+
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		return [
+			this.about(),
 			this.folder("atlasFolder", "Atlas folder", "Where your notes live. New Map lists notes in this folder."),
 			this.folder("kindsFolder", "Kinds folder", "Kind notes live here."),
 			this.folder("mapsFolder", "Maps folder", "Used when no Map kind exists, and for the Map kind note the plugin creates."),

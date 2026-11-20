@@ -36,6 +36,8 @@ How each field is asked for comes from its Obsidian property type (`.obsidian/ty
 
 Open Settings, then ACE Actions (needs Obsidian 1.13 or newer). Per-kind settings (folder, fields and their options, template) stay on Kind notes; the plugin settings below cover the rest. Folders use Obsidian's folder picker. Intensities is a list: add with +, drag to reorder, delete with the bin.
 
+The first row, **About ACE**, expands into a short guide to LYT, ACE and how this plugin implements them, using your current folder names.
+
 | setting | default |
 |---|---|
 | Atlas folder | `Atlas` |

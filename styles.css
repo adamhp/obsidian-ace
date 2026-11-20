@@ -19,3 +19,18 @@
 	margin-right: var(--size-4-1);
 	align-self: center;
 }
+
+.ace-about summary {
+	cursor: pointer;
+}
+
+.ace-about > div {
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	user-select: text;
+}
+
+.ace-about h3 {
+	font-size: var(--font-ui-medium);
+	margin: var(--size-4-3) 0 var(--size-4-1);
+}
