@@ -2,12 +2,14 @@ import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
 import { copyFileSync, mkdirSync } from "fs";
-import { dirname, join, resolve } from "path";
+import { join, resolve } from "path";
 
 const prod = process.argv[2] === "production";
 const vault = process.env.ACE_VAULT ?? "/mnt/c/Users/adamp/Documents/ACE Dev Vault";
-const outfile = `${vault}/.obsidian/plugins/ace-actions/main.js`;
-const outdir = dirname(outfile);
+// main.js is built at the repo root, where the release workflow picks it up.
+// Outside CI it is also copied, with manifest.json and styles.css, into the dev vault.
+const copyToVault = !process.env.CI;
+const outdir = `${vault}/.obsidian/plugins/ace-actions`;
 
 const REAL_VAULT = "/mnt/c/Users/adamp/Documents/GitHub/Obsidian";
 const norm = (p) => resolve(p).replace(/[\\/]+/g, "/").replace(/\/+$/, "").toLowerCase();
@@ -20,8 +22,9 @@ const copyAssets = {
   name: "copy-assets",
   setup(build) {
     build.onEnd(() => {
+      if (!copyToVault) return;
       mkdirSync(outdir, { recursive: true });
-      for (const f of ["manifest.json", "styles.css"]) copyFileSync(f, join(outdir, f));
+      for (const f of ["main.js", "manifest.json", "styles.css"]) copyFileSync(f, join(outdir, f));
     });
   },
 };
@@ -35,7 +38,7 @@ const context = await esbuild.context({
   logLevel: "info",
   sourcemap: prod ? false : "inline",
   treeShaking: true,
-  outfile,
+  outfile: "main.js",
   plugins: [copyAssets],
 });
 
