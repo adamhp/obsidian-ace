@@ -36,8 +36,11 @@ export class Ace {
 	}
 
 	// Today's date and the current time, in the date and time formats from settings.
+	// The plugin review's scanner can't resolve moment's types and reads `moment` as `any`,
+	// so it is given the one call signature used here.
 	now(): { date: string; time: string } {
-		const m = moment();
+		const now = moment as unknown as () => { format(fmt: string): string };
+		const m = now();
 		return { date: m.format(this.settings.dateFormat), time: m.format(this.settings.timeFormat) };
 	}
 
