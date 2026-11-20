@@ -54,10 +54,16 @@
 }
 
 .ace-danger-zone {
-	margin-top: var(--size-4-4);
-	padding: 0 var(--size-4-3);
+	margin: var(--size-4-4) 0;
+	padding: var(--size-4-3) var(--size-4-4);
 	border: 1px solid var(--background-modifier-error);
 	border-radius: var(--radius-m);
+}
+
+/* The box supplies the spacing, so the row inside adds none of its own. */
+.ace-danger-zone .setting-item {
+	padding: 0;
+	border: none;
 }
 
 .ace-danger-zone .setting-item-name {
