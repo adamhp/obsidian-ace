@@ -34,3 +34,21 @@
 	font-size: var(--font-ui-medium);
 	margin: var(--size-4-3) 0 var(--size-4-1);
 }
+
+.ace-check-list {
+	margin: var(--size-4-2) 0;
+	padding-left: var(--size-4-6);
+}
+
+.ace-check-scroll {
+	max-height: 12em;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding-top: var(--size-4-1);
+	padding-bottom: var(--size-4-1);
+}
+
+.ace-rename-warning {
+	margin-top: var(--size-4-1);
+}

@@ -211,7 +211,7 @@ class ConfirmModal extends Modal {
 	constructor(
 		app: App,
 		private title: string,
-		private message: string,
+		private message: string | ((el: HTMLElement) => void),
 		private button: string,
 		private done: (v: boolean) => void,
 	) {
@@ -220,7 +220,8 @@ class ConfirmModal extends Modal {
 
 	onOpen(): void {
 		this.titleEl.setText(this.title);
-		this.contentEl.createEl("p", { text: this.message });
+		if (typeof this.message === "string") this.contentEl.createEl("p", { text: this.message });
+		else this.message(this.contentEl.createDiv());
 		new Setting(this.contentEl)
 			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
 			.addButton((b) =>
@@ -241,7 +242,13 @@ class ConfirmModal extends Modal {
 	}
 }
 
-export function confirm(app: App, title: string, message: string, button: string): Promise<boolean> {
+// `message` is plain text, or a function that builds the body.
+export function confirm(
+	app: App,
+	title: string,
+	message: string | ((el: HTMLElement) => void),
+	button: string,
+): Promise<boolean> {
 	return new Promise((resolve) => {
 		new ConfirmModal(app, title, message, button, resolve).open();
 	});

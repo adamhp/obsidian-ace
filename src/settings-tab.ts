@@ -1,4 +1,4 @@
-import { App, Component, MarkdownRenderer, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
+import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettingTab, SettingDefinition, SettingDefinitionItem, TFile } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
@@ -37,6 +37,8 @@ export class AceSettingTab extends PluginSettingTab {
 	private aboutOpen = false;
 	private missingAnchor: HTMLElement | null = null;
 	private missingEl: HTMLElement | null = null;
+	private renameWarnEl: HTMLElement | null = null;
+	private renameButton: ButtonComponent | null = null;
 
 	constructor(
 		app: App,
@@ -47,7 +49,10 @@ export class AceSettingTab extends PluginSettingTab {
 		// Refresh the Kinds list once the cache catches up after a Save or New kind.
 		this.plugin.registerEvent(
 			this.app.metadataCache.on("changed", (file) => {
-				if (file.parent?.path === this.s.kindsFolder && this.containerEl.isShown()) this.update();
+				if (!this.containerEl.isShown()) return;
+				if (file.parent?.path === this.s.kindsFolder) this.update();
+				// A rename by Check notes lands in the cache note by note; keep the warning's counts in step.
+				else this.refreshRenameWarning();
 			}),
 		);
 	}
@@ -79,6 +84,8 @@ export class AceSettingTab extends PluginSettingTab {
 			if (from === this.s.props[k]) delete this.s.renamedFrom[k];
 			else this.s.renamedFrom[k] = from;
 			await this.plugin.saveSettings();
+			// No redraw here: that would take the cursor out of the box while typing.
+			this.refreshRenameWarning();
 			return;
 		}
 		if (FOLDER_KEYS.includes(key)) {
@@ -290,16 +297,21 @@ export class AceSettingTab extends PluginSettingTab {
 	// Asks, then removes old keys from Kind notes that already have the new key. Returns the result line, or null if cancelled.
 	private async removeOldKeys(items: { from: string; to: string; files: TFile[] }[]): Promise<string | null> {
 		const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
-		const lines = items.flatMap((t) =>
-			t.files.map((f) => {
-				const fm = this.ace.fm(f);
-				return `${f.basename} has ${t.from} (${show(fm[t.from])}) and ${t.to} (${show(fm[t.to])})`;
-			}),
-		);
 		const ok = await confirm(
 			this.app,
 			"Remove old keys from Kind notes?",
-			`${lines.join("; ")}. The old key and its value are removed. The new key stays as it is.`,
+			(el) => {
+				el.createEl("p", { text: "These Kind notes have an old key and its new key. The old key and its value are removed. The new key stays as it is." });
+				const ul = el.createEl("ul", { cls: "ace-check-list" });
+				for (const t of items) {
+					for (const f of t.files) {
+						const fm = this.ace.fm(f);
+						const li = ul.createEl("li");
+						li.createEl("strong", { text: f.basename });
+						li.appendText(`: remove ${t.from} (${show(fm[t.from])}), keep ${t.to} (${show(fm[t.to])})`);
+					}
+				}
+			},
 			"Remove old",
 		);
 		if (!ok) return null;
@@ -313,78 +325,111 @@ export class AceSettingTab extends PluginSettingTab {
 		return out.join("\n");
 	}
 
-	private async renameInNotes(): Promise<void> {
-		const plural = (n: number, kind = false) => (n === 1 ? `1 ${kind ? "Kind note" : "note"}` : `${n} ${kind ? "Kind notes" : "notes"}`);
-		const names = (files: TFile[]) => files.map((f) => f.basename).join(", ");
+	// What Check notes would do: renames, notes it must leave alone, and old Kind keys it can remove.
+	private pendingRenames() {
+		type Item = { key?: PropKey; from: string; to: string; files: TFile[] };
 		// `key` is set for a renamed ACE property; old Kind note keys have none.
-		const found: { key?: PropKey; from: string; to: string; files: TFile[] }[] = [];
+		const found: Item[] = [];
 		for (const key of PROP_KEYS) {
 			const from = this.s.renamedFrom[key];
 			if (from === undefined) continue;
-			const files = this.ace.notesWithProperty(from);
-			if (files.length > 0) found.push({ key, from, to: this.s.props[key], files });
-			else delete this.s.renamedFrom[key];
+			found.push({ key, from, to: this.s.props[key], files: this.ace.notesWithProperty(from) });
 		}
 		found.push(...this.ace.oldKindKeys());
-		// A note that already has the new name can't be renamed without losing a value: report it, don't offer it.
-		const todo: ((typeof found)[number] & { clash: number })[] = [];
-		const both: string[] = [];
+		const todo: (Item & { clash: number })[] = [];
+		// Notes that have both names: renaming would lose a value, so they are reported, not renamed.
+		const both: Item[] = [];
 		// Kind notes that have an old key and its new one: the old key can be removed, after asking.
-		const removable: { from: string; to: string; files: TFile[] }[] = [];
+		const removable: Item[] = [];
 		for (const t of found) {
 			const has = (f: TFile) => Object.prototype.hasOwnProperty.call(this.ace.fm(f), t.to);
 			const clash = t.files.filter(has);
 			const files = t.files.filter((f) => !has(f));
-			if (clash.length > 0 && t.key === undefined) removable.push({ from: t.from, to: t.to, files: clash });
-			else if (clash.length > 0) both.push(`${names(clash)} ${clash.length === 1 ? "has" : "have"} both ${t.from} and ${t.to}`);
+			if (clash.length > 0) (t.key === undefined ? removable : both).push({ ...t, files: clash });
 			if (files.length > 0) todo.push({ ...t, files, clash: clash.length });
 		}
-		const leftAlone = both.length === 0 ? "" : `${both.join("; ")}. Remove one of the two by hand in ${both.length === 1 ? "that note" : "those notes"}.`;
-		if (todo.length === 0) {
+		return { found, todo, both, removable };
+	}
+
+	// Shows, under the Check notes row, what is waiting to be renamed. Runs without redrawing the tab.
+	private refreshRenameWarning(): void {
+		const el = this.renameWarnEl;
+		if (!el || !el.isConnected) return;
+		el.empty();
+		const plural = (n: number) => (n === 1 ? "1 note still uses" : `${n} notes still use`);
+		const p = this.pendingRenames();
+		for (const t of p.found) {
+			if (t.files.length === 0) continue;
+			el.createDiv({
+				text: t.key === undefined
+					? `${t.files.length === 1 ? "1 Kind note has" : `${t.files.length} Kind notes have`} the old key ${t.from}.`
+					: `${plural(t.files.length)} ${t.from}, which is now ${t.to}. ACE no longer reads it there.`,
+			});
+		}
+		if (el.childElementCount > 0) el.createDiv({ text: "Press Check notes to update them." });
+		this.renameButton?.buttonEl.toggleClass("mod-cta", el.childElementCount > 0);
+	}
+
+	// Renames each changed property in the notes that still use its old name, after asking.
+	private async renameInNotes(): Promise<void> {
+		const count = (n: number, kind = false) => (n === 1 ? `1 ${kind ? "Kind note" : "note"}` : `${n} ${kind ? "Kind notes" : "notes"}`);
+		const { found, todo, both, removable } = this.pendingRenames();
+		for (const t of found) if (t.key !== undefined && t.files.length === 0) delete this.s.renamedFrom[t.key];
+		const notRenamed = both.map((t) => `${count(t.files.length)} with both ${t.from} and ${t.to}`).join("; ");
+		if (todo.length === 0 && removable.length === 0 && both.length === 0) {
 			await this.plugin.saveSettings();
-			if (removable.length > 0) {
-				const done = await this.removeOldKeys(removable);
-				if (done !== null) new Notice([done, leftAlone === "" ? "" : `Not renamed: ${leftAlone}`].filter((x) => x !== "").join("\n"), 10000);
-				this.update();
-				return;
-			}
-			new Notice(
-				leftAlone === "" ? "No notes use an old property name or an old Kind note key." : `Nothing to rename. ${leftAlone}`,
-				leftAlone === "" ? undefined : 10000,
-			);
+			new Notice("No notes use an old property name or an old Kind note key.");
+			this.refreshRenameWarning();
 			return;
 		}
-		const lines = todo
-			.map((t) => `${t.from} becomes ${t.to} in ${t.key === undefined ? `${plural(t.files.length, true)} (${names(t.files)})` : plural(t.files.length)}`)
-			.join("; ");
-		const ok = await confirm(
-			this.app,
-			"Rename properties in existing notes?",
-			`${lines}. Only the property's name changes; its value stays. Views inside existing Map and Kind notes are not changed.${leftAlone === "" ? "" : ` Not renamed: ${leftAlone}`}`,
-			"Rename",
-		);
-		if (!ok) return;
 		const out: string[] = [];
-		for (const t of todo) {
-			try {
-				const r = await this.ace.renameProperty(t.from, t.to, t.files);
-				let line = `${t.from} to ${t.to}: renamed in ${plural(r.renamed)}`;
-				if (r.skipped.length > 0) line += `, skipped ${r.skipped.length} that already have ${t.to} (${r.skipped.join(", ")})`;
-				if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
-				out.push(line);
-				// Keep the old name on record while any note still carries it.
-				if (t.key !== undefined && t.clash === 0 && r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
-			} catch (e) {
-				out.push(`${t.from} to ${t.to} failed: ${e instanceof Error ? e.message : String(e)}`);
+		if (todo.length > 0 || both.length > 0) {
+			const ok = await confirm(
+				this.app,
+				todo.length > 0 ? "Rename properties in existing notes?" : "Nothing to rename",
+				(el) => {
+					if (todo.length > 0) {
+						el.createEl("p", { text: "Only the property's name changes. Its value stays. Views inside existing Map and Kind notes are not changed." });
+						const ul = el.createEl("ul", { cls: "ace-check-list" });
+						for (const t of todo) {
+							const li = ul.createEl("li");
+							li.createEl("strong", { text: `${t.from} becomes ${t.to}` });
+							li.appendText(t.key === undefined ? ` in ${count(t.files.length, true)}: ${t.files.map((f) => f.basename).join(", ")}` : ` in ${count(t.files.length)}`);
+						}
+					}
+					for (const t of both) {
+						el.createEl("p", {
+							cls: "mod-warning",
+							text: `Not renamed: ${count(t.files.length)} already ${t.files.length === 1 ? "has" : "have"} both ${t.from} and ${t.to}. Remove one of the two by hand in ${t.files.length === 1 ? "that note" : "each of them"}.`,
+						});
+						const ul = el.createEl("ul", { cls: "ace-check-list ace-check-scroll" });
+						for (const f of [...t.files].sort((a, b) => a.path.localeCompare(b.path))) ul.createEl("li", { text: f.path.replace(/\.md$/i, "") });
+					}
+				},
+				todo.length > 0 ? "Rename" : "OK",
+			);
+			if (!ok && todo.length > 0) return;
+			for (const t of todo) {
+				try {
+					const r = await this.ace.renameProperty(t.from, t.to, t.files);
+					let line = `${t.from} to ${t.to}: renamed in ${count(r.renamed)}`;
+					if (r.skipped.length > 0) line += `, skipped ${r.skipped.length} that already have ${t.to}`;
+					if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
+					out.push(line);
+					// Keep the old name on record while any note still carries it.
+					if (t.key !== undefined && t.clash === 0 && r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
+				} catch (e) {
+					out.push(`${t.from} to ${t.to} failed: ${e instanceof Error ? e.message : String(e)}`);
+				}
 			}
+			if (todo.length > 0 && notRenamed !== "") out.push(`Not renamed: ${notRenamed}`);
 		}
-		if (leftAlone !== "") out.push(`Not renamed: ${leftAlone}`);
 		if (removable.length > 0) {
 			const done = await this.removeOldKeys(removable);
 			if (done !== null) out.push(done);
 		}
 		await this.plugin.saveSettings();
-		new Notice(out.join("\n"), 10000);
+		if (out.length > 0) new Notice(out.join("\n"), 10000);
 		this.update();
 	}
 
@@ -433,7 +478,12 @@ export class AceSettingTab extends PluginSettingTab {
 						name: "Rename in existing notes",
 						desc: "After changing a name above, renames the old property in every note that has it. Also renames old keys on Kind notes, such as default_up to default_map. Shows how many notes will change and asks first.",
 						render: (setting) => {
-							setting.addButton((b) => b.setButtonText("Check notes").onClick(() => void this.renameInNotes()));
+							setting.addButton((b) => {
+								this.renameButton = b;
+								b.setButtonText("Check notes").onClick(() => void this.renameInNotes());
+							});
+							this.renameWarnEl = setting.descEl.createDiv({ cls: "ace-rename-warning mod-warning" });
+							this.refreshRenameWarning();
 						},
 					},
 				],

@@ -295,9 +295,9 @@ Three seeded Kind notes carry old keys: Widget (\`default_up\`), Sketch (\`defau
 
 ## Property names
 Open Settings, then ACE Actions, then Property names. Put every name back at the end.
-- [ ] Change Kind property to \`type\`. Run New note, pick Concept, name it "Typed note". Expect \`type: [[Concept]]\` and no \`kind\` property.
+- [ ] Change Kind property to \`type\`. Expect a warning to appear under Rename in existing notes while you type, without the cursor leaving the box: "N notes still use kind, which is now type. ACE no longer reads it there." and "Press Check notes to update them.", with the Check notes button highlighted. Run New note, pick Concept, name it "Typed note". Expect \`type: [[Concept]]\` and no \`kind\` property.
 - [ ] Open [[Idempotency]] (it still has \`kind\`). Run File by kind or Set kind: expect the plugin not to know its kind (Set kind does not list Concept first).
-- [ ] Press Check notes. Expect a window saying kind becomes type in N notes. Expect the window to add "Not renamed: Has type already has both kind and type." Press Rename. Expect a notice with the number renamed and the same Not renamed line.
+- [ ] Press Check notes. Expect a window saying kind becomes type in N notes. Expect the window to add "Not renamed: 13 notes already have both kind and type." above a scrolling list with one note per line (Inbox/Has type already and the 12 in Inbox/Both names). Press Rename. Expect a notice with the number renamed and "Not renamed: 13 notes with both kind and type". Expect the warning under the row to drop to those 13.
 - [ ] Open [[Idempotency]]: expect \`type: [[Concept]]\` in the place \`kind\` was. Open [[Inbox/Has type already]]: expect both \`kind\` and \`type: draft\` unchanged.
 - [ ] Edit any Kind and press Add field (or New field): type \`type\`. Expect "ACE writes type itself." Type \`kind\`: expect it to be allowed. Cancel.
 - [ ] Open the About ACE guide. Expect "A note's \`type\` property" and \`type\` first in the reserved names.
