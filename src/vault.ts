@@ -284,19 +284,22 @@ export class Ace {
 		return true;
 	}
 
+	// The starter kinds that have no Kind note yet: what Create starter kinds would create.
+	missingStarterKinds(): string[] {
+		const s = this.settings;
+		return STARTER_KINDS.filter(
+			(name) => !this.kind(name) && !this.app.vault.getAbstractFileByPath(`${s.kindsFolder}/${name}.md`),
+		);
+	}
+
+	// Map is not a starter kind: the plugin creates it by itself (see ensureMapKind).
 	async createStarterKinds(): Promise<{ created: string[]; skipped: string[] }> {
 		const s = this.settings;
-		const created: string[] = [];
-		const skipped: string[] = [];
-		for (const name of STARTER_KINDS) {
-			if (this.kind(name) || this.app.vault.getAbstractFileByPath(`${s.kindsFolder}/${name}.md`)) {
-				skipped.push(name);
-				continue;
-			}
+		const created = this.missingStarterKinds();
+		const skipped = STARTER_KINDS.filter((name) => !created.includes(name));
+		for (const name of created) {
 			await this.createNote(s.kindsFolder, name, starterKindFrontmatter(name, s), kindNoteBody(s));
-			created.push(name);
 		}
-		(await this.ensureMapKind() ? created : skipped).push("Map");
 		return { created, skipped };
 	}
 

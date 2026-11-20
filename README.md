@@ -58,7 +58,9 @@ The first row, **About ACE**, expands into a short guide to LYT, ACE, how this p
 
 The two effort templates are markdown files whose body (without properties) becomes a new effort's body. `{{date}}` and `{{time}}` are filled in with the Log formats, and in the Make effort template `{{note}}` becomes a link to the note you started from. While a template is blank or its file is missing, the built-in text is used; a missing file gets a **Create file** button that writes the built-in text there for you to edit.
 
-The **Create starter kinds** button adds the standard Kind notes and the Map kind. The Maps folder is used when no Map kind exists and for the Map kind note it creates. It never overwrites an existing note.
+The **Create starter kinds** button adds the starter Kind notes: Article, Book, Collection, Concept, Idea, Method and Tool. Its row lists which of them it will create and which are already there. It never overwrites an existing note.
+
+The Map kind is not a starter kind. The plugin creates its Kind note by default when it loads, in the Kinds folder, if there is none. New Map also creates it if it is missing. The Maps folder is used when no Map kind exists and for the Map kind note the plugin creates.
 
 ### Kinds editor
 

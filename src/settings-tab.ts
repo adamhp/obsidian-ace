@@ -6,6 +6,7 @@ import { ask, confirm, confirmTyped } from "./ui";
 import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
 import { aboutMarkdown } from "./about";
+import { STARTER_KINDS } from "./starter";
 
 type FolderKey = "atlasFolder" | "kindsFolder" | "mapsFolder" | "defaultFolder" | "sourcesFolder" | "effortsFolder";
 type TextKey = "newEffortTemplate" | "makeEffortTemplate" | "logFormat" | "dateFormat" | "timeFormat";
@@ -174,6 +175,15 @@ export class AceSettingTab extends PluginSettingTab {
 		this.s.intensities.splice(i, 1);
 		await this.plugin.saveSettings();
 		this.update();
+	}
+
+	// Says which starter kinds the button would create, and which are already there.
+	private starterDesc(): string {
+		const missing = this.ace.missingStarterKinds();
+		const have = STARTER_KINDS.filter((k) => !missing.includes(k));
+		if (missing.length === 0) return `All starter kinds already exist: ${have.join(", ")}.`;
+		const there = have.length === 0 ? "" : ` Already there: ${have.join(", ")}.`;
+		return `Will create: ${missing.join(", ")}.${there} Existing notes are never overwritten.`;
 	}
 
 	private async createStarterKinds(): Promise<void> {
@@ -580,9 +590,14 @@ export class AceSettingTab extends PluginSettingTab {
 				items: [
 					{
 						name: "Create starter kinds",
-						desc: "Adds the standard Kind notes and the Map kind. Existing notes are never overwritten.",
+						desc: this.starterDesc(),
 						render: (setting) => {
-							setting.addButton((b) => b.setButtonText("Create").onClick(() => this.createStarterKinds()));
+							setting.addButton((b) =>
+								b
+									.setButtonText("Create")
+									.setDisabled(this.ace.missingStarterKinds().length === 0)
+									.onClick(() => this.createStarterKinds()),
+							);
 						},
 					},
 				],

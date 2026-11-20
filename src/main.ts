@@ -26,6 +26,10 @@ export default class AcePlugin extends Plugin {
 		await this.loadSettings();
 		const ace = new Ace(this.app, this.settings);
 		this.addSettingTab(new AceSettingTab(this.app, this, ace));
+		// Map is part of ACE, so its Kind note is created by default. Never overwrites an existing note.
+		this.app.workspace.onLayoutReady(() => {
+			ace.ensureMapKind().catch((e) => console.error("ACE Actions: could not create the Map kind", e));
+		});
 		const fail = (name: string, e: unknown) => {
 			console.error(`ACE Actions: ${name} failed`, e);
 			new Notice(`${name} failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
