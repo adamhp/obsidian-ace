@@ -1,4 +1,5 @@
-// Seeds the dev vault with fictional sample notes. Usage: npm run seed [-- --force]
+// Seeds the dev vault with fictional sample notes. Usage: npm run seed [-- --force | --reset]
+// --reset first moves everything except .obsidian into the vault's .trash, then seeds from scratch.
 // Env ACE_VAULT overrides the target. Never writes to the real vault.
 import fs from "node:fs";
 import path from "node:path";
@@ -35,6 +36,18 @@ const guarded = [REAL, ...BLOCKED].flatMap((g) => [path.resolve(g), real(g)]);
 if (guarded.some((g) => within(vault, g) || within(vaultReal, g))) {
 	console.error(`Refusing to seed "${vault}": it is the real vault or a protected path.`);
 	process.exit(1);
+}
+
+if (process.argv.includes("--reset") && fs.existsSync(vault)) {
+	const bin = path.join(vault, ".trash", `seed-reset-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+	let moved = 0;
+	for (const name of fs.readdirSync(vault)) {
+		if (name === ".obsidian" || name === ".trash") continue;
+		fs.mkdirSync(bin, { recursive: true });
+		fs.renameSync(path.join(vault, name), path.join(bin, name));
+		moved++;
+	}
+	console.log(`Reset: moved ${moved} top-level items to ${bin}`);
 }
 
 let written = 0, skipped = 0;
@@ -90,6 +103,10 @@ put("System/Templates/Make effort.md", null, "Started from {{note}} on {{date}}.
 // Dedicated kinds for the walkthrough (new files only; put() never overwrites without --force).
 put("Atlas/Kinds/Gadget.md", { title: "Gadget", folder: "Atlas/Dots", fields: ["colour"] }, kindBody);
 put("Atlas/Kinds/Label.md", { title: "Label", folder: "Atlas/Dots", fields: ["note"], title_template: "{{note}}" }, kindBody);
+// Kinds for the settings walkthrough: folders that don't exist yet, and old Kind note keys.
+put("Atlas/Kinds/Widget.md", { title: "Widget", folder: "Atlas/Widgets", default_up: "Software" }, kindBody);
+put("Atlas/Kinds/Sketch.md", { title: "Sketch", folder: "Atlas/Sketches", fields: ["status"], status_options: ["draft", "done"], default_status: "draft", default_up: "Ideas" }, kindBody);
+put("Atlas/Kinds/Relic.md", { title: "Relic", folder: "Atlas/Dots", default_up: "People", default_map: "Places", default_colour: null }, kindBody);
 // Obsidian property types for the dev vault (only if absent; put() would also honour --force).
 const typesPath = path.join(vault, ".obsidian/types.json");
 if (!fs.existsSync(typesPath)) {
@@ -188,6 +205,7 @@ add("Inbox/Meeting notes.md", null, "Agenda, decisions, actions.\n");
 add("Inbox/Book idea.md", null, "A book about gardening for lazy people. Could be an Idea or an Effort.\n");
 add("Inbox/Movie to see.md", null, "Recommended by a friend: a heist film.\n");
 add("Atlas/Sources/Misfiled Book.md", { kind: L("Book"), status: "to read", author: "Unknown" }, "Kind is Book but it is not in Atlas/Sources/Books. Try File by kind.\n");
+add("Inbox/Has type already.md", { kind: L("Concept"), type: "draft" }, "Has both `kind` and `type`. Renaming the Kind property to `type` must skip this note.\n");
 add("Loose note.md", null, "A note sitting in the vault root.\n");
 
 // Home
@@ -243,7 +261,8 @@ Open Settings, then ACE Actions, then Kinds. Each kind has an Edit button; click
 - [ ] Open Card in the editor, press Delete. Expect a confirmation saying 0 notes use it, then the Notice "Deleted the Card kind; 0 notes now have no kind." and Card.md in the trash.
 - [ ] Open Gadget in the editor and check its usage: two seeded notes use it ([[Gadget One]] written \`[[Gadget]]\` and [[Gadget Two]] written \`[[gadget]]\`). Press Delete. Expect the confirmation to say 2 notes use it, then the Notice "Deleted the Gadget kind; 2 notes now have no kind." Open both notes and expect only the \`kind\` property gone (up, colour and the body unchanged). Gadget.md is in the trash.
 - [ ] Open the Map kind in the editor. Expect no Rename or Delete buttons and the line "Map is part of ACE and can't be renamed or deleted." Other edits still save.
-- [ ] Next to the folder button at the top right of Kinds, expect a faint "N missing folders" count. Press the button (Create missing folders). Expect a notice listing the kind folders it created (e.g. Atlas/Sources/Methods), and the ⚠ counts and the faint count to clear. Press it again: "Every kind's folder already exists."
+- [ ] Next to the folder button at the top right of Kinds, expect a faint "N missing folders" count (Widget and Sketch point at Atlas/Widgets and Atlas/Sketches, which don't exist). Press the button (Create missing folders). Expect a notice listing the folders it created, and the faint count to disappear straight away, without closing settings. Press it again: "Every kind's folder already exists."
+- [ ] Delete the Atlas/Widgets folder in the file explorer, then reopen Settings. Expect "1 missing folder" to be back.
 - [ ] Open the Gadget Kind note and add \`default_map: Tools Map\` to its properties by hand. Then edit Gadget, set Folder to \`Atlas/Gadgets\` and Template to \`System/Templates/Gadget\`. Expect three Problems, each with a Create button. Press each: expect the folder, the Map note (in Atlas/Maps, with a Dots view) and an empty template file to appear, and each Problem to disappear. Cancel the editor; the Kind note is unchanged (remove \`default_up\` by hand afterwards if you like).
 - [ ] Open the Book note, add \`default_status: x\` by hand to its properties, then open the Book editor. Expect the Problems line "default_status looks like an old key. Rename it to status_default." Remove the key afterwards.
 
@@ -257,6 +276,31 @@ Open Settings, then ACE Actions. Change one thing at a time and put it back afte
 - [ ] Under Intensities, press + and add \`paused\`, drag it to the top, run Make effort and expect \`paused\` listed first. Then delete it.
 - [ ] Change Time format to "HH:mm:ss", run Log in an Effort. Expect the time stamp to show seconds. Then change it back to "HH:mm".
 - [ ] Open [[Plugin for daily review]], run Make effort and pick the first intensity. Expect a new Effort in Efforts, an effort link on the Idea, and its status unchanged.
+
+## About ACE
+- [ ] Open Settings, then ACE Actions. Expect "About ACE" as the first row, collapsed. Click the line under it: expect the guide (LYT, ACE, how the plugin works, field syntax, reserved names). Edit any Kind and save: expect the guide to stay open.
+
+## Old Kind note keys
+Three seeded Kind notes carry old keys: Widget (\`default_up\`), Sketch (\`default_up\` and \`default_status\`), Relic (\`default_up\` and \`default_map\` together, plus an empty \`default_colour\`).
+- [ ] In Settings, Kinds, expect a ⚠ on Widget, Sketch and Relic. Edit Widget: expect the Problems line "default_up is an old key. Rename it to default_map." Cancel.
+- [ ] Under Property names, press Check notes. Expect a window saying default_up becomes default_map in 3 Kind notes (Relic, Sketch, Widget) and default_status becomes status_default in 1 Kind note (Sketch). Press Rename.
+- [ ] Expect a notice: default_up renamed in 2 notes, skipped 1 that already has default_map (Relic); default_status renamed in 1 note.
+- [ ] Open the Widget note: expect \`default_map: Software\` in the same place default_up was. Open Sketch: expect \`default_map: Ideas\` and \`status_default: draft\`. Open Relic: expect it unchanged (both keys still there, \`default_colour\` still empty).
+- [ ] Run New note, pick Widget. Expect Software listed first in the Map picker. Escape.
+- [ ] Press Check notes again. Expect the window to list only Relic's default_up. Cancel. Delete \`default_up\` from Relic by hand, press Check notes: expect "No notes use an old property name or an old Kind note key."
+
+## Property names
+Open Settings, then ACE Actions, then Property names. Put every name back at the end.
+- [ ] Change Kind property to \`type\`. Run New note, pick Concept, name it "Typed note". Expect \`type: [[Concept]]\` and no \`kind\` property.
+- [ ] Open [[Idempotency]] (it still has \`kind\`). Run File by kind or Set kind: expect the plugin not to know its kind (Set kind does not list Concept first).
+- [ ] Press Check notes. Expect a window saying kind becomes type in N notes. Press Rename. Expect a notice with the number renamed and 1 skipped: "Has type already".
+- [ ] Open [[Idempotency]]: expect \`type: [[Concept]]\` in the place \`kind\` was. Open [[Inbox/Has type already]]: expect both \`kind\` and \`type: draft\` unchanged.
+- [ ] Edit any Kind and press Add field (or New field): type \`type\`. Expect "ACE writes type itself." Type \`kind\`: expect it to be allowed. Cancel.
+- [ ] Open the About ACE guide. Expect "A note's \`type\` property" and \`type\` first in the reserved names.
+- [ ] Change Map property to \`type\` too. Expect a notice that the name is already used and that it is still using \`up\`.
+- [ ] Change Map property to \`parent\`. Open [[Inbox/Meeting notes]], run Add to Map, pick Software. Expect \`parent: ["[[Software]]"]\`. Run New Map, name it "Parents": expect its view to still work for notes that use \`parent\`.
+- [ ] Put it back: clear Kind property and Map property (blank means the default). Press Check notes: expect type becomes kind and parent becomes up. Press Rename. Expect "Has type already" skipped again. Open [[Idempotency]]: expect \`kind\` back.
+- [ ] Change Intensity property to \`heat\`. Run New effort (any name, on, Single note). Expect \`heat: on\`. Clear the setting, press Check notes and Rename: expect that effort to have \`intensity: on\`.
 
 ## Existing structure
 - [[Software]], [[Culinary]], [[People]], [[Places]], [[Ideas]], [[Quotes]], [[Reading List]], [[Wishlist]]
