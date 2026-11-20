@@ -35,6 +35,8 @@ const PROP_DESCS: Record<PropKey, string> = {
 export class AceSettingTab extends PluginSettingTab {
 	// Kept so the guide stays open when the tab redraws.
 	private aboutOpen = false;
+	private missingAnchor: HTMLElement | null = null;
+	private missingEl: HTMLElement | null = null;
 
 	constructor(
 		app: App,
@@ -235,6 +237,24 @@ export class AceSettingTab extends PluginSettingTab {
 		return rows;
 	}
 
+	// Redraws the faint "N missing folders" count beside the Create missing folders button.
+	// The count sits outside the button, so a redraw of the tab does not clear it: remove the old one here.
+	private refreshMissingCount(): void {
+		this.missingEl?.remove();
+		this.missingEl = null;
+		const anchor = this.missingAnchor;
+		if (!anchor || !anchor.isConnected) return;
+		const n = this.ace.missingKindFolders().length;
+		if (n === 0) return;
+		this.missingEl = createSpan({ cls: "ace-missing-count", text: `${n} missing ${n === 1 ? "folder" : "folders"}` });
+		anchor.before(this.missingEl);
+	}
+
+	update(): void {
+		super.update();
+		this.refreshMissingCount();
+	}
+
 	private async createMissingFolders(): Promise<void> {
 		try {
 			const made = await this.ace.createMissingKindFolders();
@@ -269,20 +289,24 @@ export class AceSettingTab extends PluginSettingTab {
 	// Renames each changed property in the notes that still use its old name, after asking.
 	private async renameInNotes(): Promise<void> {
 		const plural = (n: number) => (n === 1 ? "1 note" : `${n} notes`);
-		const todo: { key: PropKey; from: string; to: string; count: number }[] = [];
+		// `key` is set for a renamed ACE property; old Kind note keys have none.
+		const todo: { key?: PropKey; from: string; to: string; files: TFile[]; where: string }[] = [];
 		for (const key of PROP_KEYS) {
 			const from = this.s.renamedFrom[key];
 			if (from === undefined) continue;
-			const count = this.ace.notesWithProperty(from).length;
-			if (count > 0) todo.push({ key, from, to: this.s.props[key], count });
+			const files = this.ace.notesWithProperty(from);
+			if (files.length > 0) todo.push({ key, from, to: this.s.props[key], files, where: plural(files.length) });
 			else delete this.s.renamedFrom[key];
+		}
+		for (const o of this.ace.oldKindKeys()) {
+			todo.push({ ...o, where: `${o.files.length === 1 ? "1 Kind note" : `${o.files.length} Kind notes`} (${o.files.map((f) => f.basename).join(", ")})` });
 		}
 		if (todo.length === 0) {
 			await this.plugin.saveSettings();
-			new Notice("No notes use an old property name.");
+			new Notice("No notes use an old property name or an old Kind note key.");
 			return;
 		}
-		const lines = todo.map((t) => `${t.from} becomes ${t.to} in ${plural(t.count)}`).join("; ");
+		const lines = todo.map((t) => `${t.from} becomes ${t.to} in ${t.where}`).join("; ");
 		const ok = await confirm(
 			this.app,
 			"Rename properties in existing notes?",
@@ -293,18 +317,19 @@ export class AceSettingTab extends PluginSettingTab {
 		const out: string[] = [];
 		for (const t of todo) {
 			try {
-				const r = await this.ace.renameProperty(t.from, t.to);
+				const r = await this.ace.renameProperty(t.from, t.to, t.files);
 				let line = `${t.from} to ${t.to}: renamed in ${plural(r.renamed)}`;
 				if (r.skipped.length > 0) line += `, skipped ${r.skipped.length} that already have ${t.to} (${r.skipped.join(", ")})`;
 				if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
 				out.push(line);
-				if (r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
+				if (t.key !== undefined && r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
 			} catch (e) {
 				out.push(`${t.from} to ${t.to} failed: ${e instanceof Error ? e.message : String(e)}`);
 			}
 		}
 		await this.plugin.saveSettings();
 		new Notice(out.join("\n"), 10000);
+		this.update();
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -350,7 +375,7 @@ export class AceSettingTab extends PluginSettingTab {
 					),
 					{
 						name: "Rename in existing notes",
-						desc: "After changing a name above, renames the old property in every note that has it. Shows how many notes will change and asks first.",
+						desc: "After changing a name above, renames the old property in every note that has it. Also renames old keys on Kind notes, such as default_up to default_map. Shows how many notes will change and asks first.",
 						render: (setting) => {
 							setting.addButton((b) => b.setButtonText("Check notes").onClick(() => void this.renameInNotes()));
 						},
@@ -399,12 +424,8 @@ export class AceSettingTab extends PluginSettingTab {
 						b.setIcon("folder-plus")
 							.setTooltip("Create missing folders")
 							.onClick(() => void this.createMissingFolders());
-						const n = this.ace.missingKindFolders().length;
-						if (n > 0) {
-							b.extraSettingsEl.before(
-								createSpan({ cls: "ace-missing-count", text: `${n} missing ${n === 1 ? "folder" : "folders"}` }),
-							);
-						}
+						this.missingAnchor = b.extraSettingsEl;
+						this.refreshMissingCount();
 					},
 				],
 				search: {

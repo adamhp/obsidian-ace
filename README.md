@@ -66,7 +66,7 @@ Under Kinds, each kind has an **Edit** button that opens an editor for its folde
 
 ## Migrating from the hard-coded version
 
-Kind notes use `default_map` where they used `default_up`. Rename the key on each Kind note that has it; the Kind editor lists it under Problems until you do.
+Kind notes use `default_map` where they used `default_up`. The Kind editor lists it under Problems until it is renamed. **Check notes** (Settings, Property names) renames old Kind note keys for you: `default_up` to `default_map`, and `default_<field>` to `<field>_default`. You can also rename them by hand.
 
 Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
 

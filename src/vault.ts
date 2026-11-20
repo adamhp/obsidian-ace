@@ -13,7 +13,7 @@ import {
 	shouldMove,
 	templatePath,
 } from "./rules";
-import { ProblemContext, ProblemFix, parseTypes, usesKind } from "./kinds";
+import { ProblemContext, ProblemFix, isEmptyValue, oldKindKey, parseTypes, usesKind } from "./kinds";
 import {
 	STARTER_KINDS,
 	kindNoteBody,
@@ -108,6 +108,22 @@ export class Ace {
 		return { updated, failed };
 	}
 
+	// Old keys on Kind notes that have a value, with their current name and the Kind notes that carry them.
+	oldKindKeys(): { from: string; to: string; files: TFile[] }[] {
+		const out = new Map<string, { from: string; to: string; files: TFile[] }>();
+		for (const f of this.app.vault.getMarkdownFiles()) {
+			if (f.parent?.path !== this.settings.kindsFolder) continue;
+			for (const [key, value] of Object.entries(this.fm(f))) {
+				const to = oldKindKey(key);
+				if (to === null || isEmptyValue(value)) continue;
+				const item = out.get(key) ?? { from: key, to, files: [] };
+				item.files.push(f);
+				out.set(key, item);
+			}
+		}
+		return [...out.values()];
+	}
+
 	notesWithProperty(name: string): TFile[] {
 		return this.app.vault
 			.getMarkdownFiles()
@@ -115,11 +131,15 @@ export class Ace {
 	}
 
 	// Renames a property in every note that has it. A note that already has the new name is skipped, never overwritten.
-	async renameProperty(from: string, to: string): Promise<{ renamed: number; skipped: string[]; failed: string[] }> {
+	async renameProperty(
+		from: string,
+		to: string,
+		files: TFile[] = this.notesWithProperty(from),
+	): Promise<{ renamed: number; skipped: string[]; failed: string[] }> {
 		let renamed = 0;
 		const skipped: string[] = [];
 		const failed: string[] = [];
-		for (const f of this.notesWithProperty(from)) {
+		for (const f of files) {
 			try {
 				let result = "absent";
 				await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {

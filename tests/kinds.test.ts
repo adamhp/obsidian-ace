@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseKindConfig } from "../src/rules";
 import {
   parseTypes, propType, toValue, numberError, isEmptyValue, fillTitle, fieldNameError,
-  draftFromFrontmatter, applyDraft, kindProblems, usesKind,
+  draftFromFrontmatter, applyDraft, kindProblems, usesKind, oldKindKey,
 } from "../src/kinds";
 
 describe("parseKindConfig field specs", () => {
@@ -175,6 +175,16 @@ describe("default_up", () => {
     expect(draftFromFrontmatter(fm).defaultUp).toBeNull();
     expect(kindProblems(draftFromFrontmatter(fm), fm, ctx).map((p) => p.text)).toEqual(["default_up is an old key. Rename it to default_map."]);
     expect(kindProblems(draftFromFrontmatter({ default_map: "x" }), { default_map: "x" }, { ...ctx, mapNames: ["x"] })).toEqual([]);
+  });
+});
+
+describe("oldKindKey", () => {
+  it("maps old keys to their current names", () => {
+    expect(oldKindKey("default_up")).toBe("default_map");
+    expect(oldKindKey("default_status")).toBe("status_default");
+    expect(oldKindKey("default_map")).toBeNull();
+    expect(oldKindKey("status_default")).toBeNull();
+    expect(oldKindKey("folder")).toBeNull();
   });
 });
 

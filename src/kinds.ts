@@ -136,6 +136,13 @@ export function applyDraft(fm: Record<string, unknown>, draft: KindDraft, initia
   }
 }
 
+// The current name for an old Kind note key, or null if the key isn't an old one.
+export function oldKindKey(key: string): string | null {
+  if (key === "default_up") return "default_map";
+  const m = /^default_(.+)$/.exec(key);
+  return m && key !== "default_map" ? `${m[1]}_default` : null;
+}
+
 export interface ProblemContext {
   folderExists(path: string): boolean;
   fileExists(path: string): boolean;
@@ -185,13 +192,14 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
     }
   }
   for (const key of Object.keys(fm)) {
-    const m = /^default_(.+)$/.exec(key);
+    const to = oldKindKey(key);
+    if (to === null) continue;
     if (key === "default_up") {
       say("default_up is an old key. Rename it to default_map.");
-    } else if (m && key !== "default_map") {
+    } else {
       say(isEmptyValue(fm[key])
         ? `${key} is an old, empty key. Delete it.`
-        : `${key} looks like an old key. Rename it to ${m[1]}_default.`);
+        : `${key} looks like an old key. Rename it to ${to}.`);
     }
   }
   for (const key of Object.keys(fm)) {
