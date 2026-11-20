@@ -1,7 +1,7 @@
 import { AbstractInputSuggest, App, Modal, Notice, Setting, TFile, TFolder, getFrontMatterInfo, parseYaml } from "obsidian";
 import type { Ace } from "./vault";
 import { FieldDraft, KindDraft, applyDraft, draftFromFrontmatter, fieldNameError, kindProblems, propType } from "./kinds";
-import { cleanName, isTaken, renameKey } from "./rules";
+import { PROP_KEYS, cleanName, isTaken, renameKey } from "./rules";
 import { ask, confirm } from "./ui";
 
 class PathSuggest extends AbstractInputSuggest<string> {
@@ -155,7 +155,7 @@ export class KindEditorModal extends Modal {
 		if (!isMap) {
 			bar
 				.addButton((b) => b.setButtonText("Rename").onClick(() => void this.rename()))
-				.addButton((b) => b.setButtonText("Delete").setWarning().onClick(() => void this.remove()));
+				.addButton((b) => b.setButtonText("Delete").setDestructive().onClick(() => void this.remove()));
 		}
 		bar
 			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
@@ -221,7 +221,7 @@ export class KindEditorModal extends Modal {
 
 	private async addField(): Promise<void> {
 		const names = this.draft.fields.map((f) => f.name);
-		const v = await ask(this.app, "New field", "", (x) => fieldNameError(x, names, Object.values(this.ace.settings.props)));
+		const v = await ask(this.app, "New field", "", (x) => fieldNameError(x, names, PROP_KEYS.map((k) => this.ace.settings.props[k])));
 		if (v === null) return;
 		this.change(() => this.draft.fields.push({ name: v.trim(), options: [], default: null }));
 	}
@@ -255,14 +255,15 @@ export class KindEditorModal extends Modal {
 			if (!fix) continue;
 			const label = fix.type === "folder" ? "Create folder" : fix.type === "map" ? "Create Map" : "Create file";
 			const b = li.createEl("button", { text: label, cls: "ace-problem-fix" });
-			b.addEventListener("click", async () => {
+			b.addEventListener("click", () => {
 				b.disabled = true;
-				try {
-					new Notice(await this.ace.fixProblem(fix));
-				} catch (e) {
-					new Notice(`${label} failed: ${e instanceof Error ? e.message : String(e)}`, 10000);
-				}
-				this.renderProblems();
+				void this.ace
+					.fixProblem(fix)
+					.then(
+						(msg) => new Notice(msg),
+						(e: unknown) => new Notice(`${label} failed: ${e instanceof Error ? e.message : String(e)}`, 10000),
+					)
+					.then(() => this.renderProblems());
 			});
 		}
 	}

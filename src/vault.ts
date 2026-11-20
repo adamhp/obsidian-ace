@@ -4,6 +4,7 @@ import {
 	KindConfig,
 	MAKE_EFFORT_TEXT,
 	NEW_EFFORT_TEXT,
+	PROP_KEYS,
 	cleanName,
 	isTaken,
 	fillTemplate,
@@ -31,7 +32,13 @@ export class Ace {
 
 	fm(file: TFile): Record<string, unknown> {
 		const f = this.app.metadataCache.getFileCache(file)?.frontmatter;
-		return f ? (f as Record<string, unknown>) : {};
+		return f ?? {};
+	}
+
+	// Today's date and the current time, in the date and time formats from settings.
+	now(): { date: string; time: string } {
+		const m = moment();
+		return { date: m.format(this.settings.dateFormat), time: m.format(this.settings.timeFormat) };
 	}
 
 	async propTypes(): Promise<Record<string, string>> {
@@ -87,7 +94,7 @@ export class Ace {
 			folderExists: (p) => this.app.vault.getAbstractFileByPath(normalizePath(p)) instanceof TFolder,
 			fileExists: (p) => this.app.vault.getAbstractFileByPath(normalizePath(p)) instanceof TFile,
 			mapNames: this.maps().map((f) => f.basename),
-			reserved: Object.values(this.settings.props),
+			reserved: PROP_KEYS.map((k) => this.settings.props[k]),
 		};
 	}
 
@@ -337,8 +344,7 @@ export class Ace {
 	async effortBody(which: "new" | "make", vars: Record<string, string> = {}): Promise<string> {
 		const path = this.effortTemplatePath(which);
 		const body = (path ? await this.readBody(path) : null) ?? (which === "new" ? NEW_EFFORT_TEXT : MAKE_EFFORT_TEXT);
-		const s = this.settings;
-		return fillTemplate(body, { date: moment().format(s.dateFormat), time: moment().format(s.timeFormat), ...vars });
+		return fillTemplate(body, { ...this.now(), ...vars });
 	}
 
 	// Creates a missing effort template, filled with the built-in text. Never overwrites.

@@ -451,7 +451,7 @@ export class AceSettingTab extends PluginSettingTab {
 						.setName("Danger zone: remove all old properties")
 						.setDesc("Deletes every old property, with its value, instead of renaming it. Shows what will be deleted and asks you to type yes.")
 						.addButton((b) =>
-							b.setButtonText("Remove all old").setWarning().onClick(() => {
+							b.setButtonText("Remove all old").setDestructive().onClick(() => {
 								danger = true;
 								close();
 							}),

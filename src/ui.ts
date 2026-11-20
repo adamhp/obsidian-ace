@@ -32,7 +32,7 @@ class PickModal<T> extends FuzzySuggestModal<T> {
 	onClose(): void {
 		super.onClose();
 		// onChooseItem fires after onClose, so defer the cancel result.
-		setTimeout(() => {
+		window.setTimeout(() => {
 			if (!this.chosen) this.done(null);
 		}, 0);
 	}
@@ -227,7 +227,7 @@ class ConfirmModal extends Modal {
 			.addButton((b) =>
 				b
 					.setButtonText(this.button)
-					.setWarning()
+					.setDestructive()
 					.onClick(() => {
 						this.answered = true;
 						this.done(true);
@@ -284,7 +284,7 @@ class TypedConfirmModal extends Modal {
 			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
 			.addButton((b) => {
 				confirmButton = b;
-				b.setButtonText(this.button).setWarning().setDisabled(true).onClick(submit);
+				b.setButtonText(this.button).setDestructive().setDisabled(true).onClick(submit);
 			});
 	}
 

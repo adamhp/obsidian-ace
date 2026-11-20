@@ -56,7 +56,9 @@ function titlePart(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "boolean") return v ? "yes" : "no";
   if (Array.isArray(v)) return v.map((x) => titlePart(x)).filter((x) => x !== "").join(", ");
-  return String(v).trim();
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "number" || typeof v === "bigint") return String(v);
+  return JSON.stringify(v) ?? "";
 }
 
 export function fillTitle(template: string, answers: Record<string, unknown>): string {
