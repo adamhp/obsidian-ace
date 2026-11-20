@@ -1,7 +1,8 @@
 {
   "name": "ace-actions",
-  "version": "0.1.0",
-  "description": "ACE Actions for Obsidian",
+  "version": "0.0.1",
+  "description": "Create typed notes, link them to Maps, file them by kind, and start Efforts, following the ACE folder framework.",
+  "license": "MIT",
   "main": "main.js",
   "private": true,
   "scripts": {
