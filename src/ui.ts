@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, Modal, Setting } from "obsidian";
+import { App, ButtonComponent, FuzzySuggestModal, Modal, Setting } from "obsidian";
 import { PropType, numberError, toValue } from "./kinds";
 import { withFirst } from "./rules";
 
@@ -240,6 +240,71 @@ class ConfirmModal extends Modal {
 		this.contentEl.empty();
 		if (!this.answered) this.done(false);
 	}
+}
+
+class TypedConfirmModal extends Modal {
+	private answered = false;
+
+	constructor(
+		app: App,
+		private title: string,
+		private build: (el: HTMLElement) => void,
+		private word: string,
+		private button: string,
+		private done: (v: boolean) => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		this.titleEl.setText(this.title);
+		this.build(this.contentEl.createDiv());
+		let typed = "";
+		let confirmButton: ButtonComponent | null = null;
+		const matches = () => typed.trim().toLowerCase() === this.word.toLowerCase();
+		const submit = () => {
+			if (!matches()) return;
+			this.answered = true;
+			this.done(true);
+			this.close();
+		};
+		new Setting(this.contentEl).setName(`Type ${this.word} to confirm`).addText((t) => {
+			t.onChange((v) => {
+				typed = v;
+				confirmButton?.setDisabled(!matches());
+			});
+			t.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
+				if (e.key === "Enter" && !e.isComposing) {
+					e.preventDefault();
+					submit();
+				}
+			});
+		});
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
+			.addButton((b) => {
+				confirmButton = b;
+				b.setButtonText(this.button).setWarning().setDisabled(true).onClick(submit);
+			});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+		if (!this.answered) this.done(false);
+	}
+}
+
+// Like confirm, but the button stays off until the person types `word`.
+export function confirmTyped(
+	app: App,
+	title: string,
+	build: (el: HTMLElement) => void,
+	word: string,
+	button: string,
+): Promise<boolean> {
+	return new Promise((resolve) => {
+		new TypedConfirmModal(app, title, build, word, button, resolve).open();
+	});
 }
 
 // `message` is plain text, or a function that builds the body.

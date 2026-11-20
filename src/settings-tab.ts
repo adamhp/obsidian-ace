@@ -2,7 +2,7 @@ import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettin
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
-import { ask, confirm } from "./ui";
+import { ask, confirm, confirmTyped } from "./ui";
 import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
 import { aboutMarkdown } from "./about";
@@ -293,7 +293,6 @@ export class AceSettingTab extends PluginSettingTab {
 		};
 	}
 
-	// Renames each changed property in the notes that still use its old name, after asking.
 	// Asks, then removes old keys from Kind notes that already have the new key. Returns the result line, or null if cancelled.
 	private async removeOldKeys(items: { from: string; to: string; files: TFile[] }[]): Promise<string | null> {
 		const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
@@ -368,6 +367,57 @@ export class AceSettingTab extends PluginSettingTab {
 		}
 		if (el.childElementCount > 0) el.createDiv({ text: "Press Check notes to update them." });
 		this.renameButton?.buttonEl.toggleClass("mod-cta", el.childElementCount > 0);
+	}
+
+	// Danger zone: deletes every old property, with its value, from every note that still has it.
+	private async removeAllOld(): Promise<void> {
+		const count = (n: number) => (n === 1 ? "1 note" : `${n} notes`);
+		const { found } = this.pendingRenames();
+		const items = found
+			.filter((t) => t.files.length > 0)
+			.map((t) => ({
+				...t,
+				// Notes where the old property is the only copy: they have no property under the new name.
+				only: t.files.filter((f) => !Object.prototype.hasOwnProperty.call(this.ace.fm(f), t.to)).length,
+			}));
+		if (items.length === 0) {
+			new Notice("No note has an old property or an old Kind note key.");
+			return;
+		}
+		const ok = await confirmTyped(
+			this.app,
+			"Delete all old properties?",
+			(el) => {
+				el.createEl("p", {
+					cls: "mod-warning",
+					text: "This deletes each old property and its value from every note that has it. It cannot be undone from here. Check notes renames instead and keeps the values.",
+				});
+				const ul = el.createEl("ul", { cls: "ace-check-list" });
+				for (const t of items) {
+					const li = ul.createEl("li");
+					li.createEl("strong", { text: `Delete ${t.from} from ${count(t.files.length)}` });
+					if (t.only > 0) {
+						li.appendText(`. ${count(t.only)} of them ${t.only === 1 ? "has" : "have"} no ${t.to}, so ${t.only === 1 ? "its" : "their"} value is lost.`);
+					} else {
+						li.appendText(`. All of them also have ${t.to}, which stays.`);
+					}
+				}
+			},
+			"yes",
+			"Delete",
+		);
+		if (!ok) return;
+		const out: string[] = [];
+		for (const t of items) {
+			const r = await this.ace.removeOldProperty(t.files, t.from);
+			let line = `Deleted ${t.from} from ${count(r.removed)}`;
+			if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
+			else if (t.key !== undefined) delete this.s.renamedFrom[t.key];
+			out.push(line);
+		}
+		await this.plugin.saveSettings();
+		new Notice(out.join("\n"), 10000);
+		this.update();
 	}
 
 	// Renames each changed property in the notes that still use its old name, after asking.
@@ -484,6 +534,14 @@ export class AceSettingTab extends PluginSettingTab {
 							});
 							this.renameWarnEl = setting.descEl.createDiv({ cls: "ace-rename-warning mod-warning" });
 							this.refreshRenameWarning();
+						},
+					},
+					{
+						name: "Danger zone: remove all old properties",
+						desc: "Deletes every old property, with its value, from every note that still has one: the names you changed above, and old keys on Kind notes. Use Check notes first; it keeps the values. Shows what will be deleted and asks you to type yes.",
+						render: (setting) => {
+							setting.nameEl.addClass("mod-warning");
+							setting.addButton((b) => b.setButtonText("Remove all old").setWarning().onClick(() => void this.removeAllOld()));
 						},
 					},
 				],
