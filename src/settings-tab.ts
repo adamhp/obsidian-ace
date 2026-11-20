@@ -288,29 +288,44 @@ export class AceSettingTab extends PluginSettingTab {
 
 	// Renames each changed property in the notes that still use its old name, after asking.
 	private async renameInNotes(): Promise<void> {
-		const plural = (n: number) => (n === 1 ? "1 note" : `${n} notes`);
+		const plural = (n: number, kind = false) => (n === 1 ? `1 ${kind ? "Kind note" : "note"}` : `${n} ${kind ? "Kind notes" : "notes"}`);
+		const names = (files: TFile[]) => files.map((f) => f.basename).join(", ");
 		// `key` is set for a renamed ACE property; old Kind note keys have none.
-		const todo: { key?: PropKey; from: string; to: string; files: TFile[]; where: string }[] = [];
+		const found: { key?: PropKey; from: string; to: string; files: TFile[] }[] = [];
 		for (const key of PROP_KEYS) {
 			const from = this.s.renamedFrom[key];
 			if (from === undefined) continue;
 			const files = this.ace.notesWithProperty(from);
-			if (files.length > 0) todo.push({ key, from, to: this.s.props[key], files, where: plural(files.length) });
+			if (files.length > 0) found.push({ key, from, to: this.s.props[key], files });
 			else delete this.s.renamedFrom[key];
 		}
-		for (const o of this.ace.oldKindKeys()) {
-			todo.push({ ...o, where: `${o.files.length === 1 ? "1 Kind note" : `${o.files.length} Kind notes`} (${o.files.map((f) => f.basename).join(", ")})` });
+		found.push(...this.ace.oldKindKeys());
+		// A note that already has the new name can't be renamed without losing a value: report it, don't offer it.
+		const todo: ((typeof found)[number] & { clash: number })[] = [];
+		const both: string[] = [];
+		for (const t of found) {
+			const has = (f: TFile) => Object.prototype.hasOwnProperty.call(this.ace.fm(f), t.to);
+			const clash = t.files.filter(has);
+			const files = t.files.filter((f) => !has(f));
+			if (clash.length > 0) both.push(`${names(clash)} ${clash.length === 1 ? "has" : "have"} both ${t.from} and ${t.to}`);
+			if (files.length > 0) todo.push({ ...t, files, clash: clash.length });
 		}
+		const leftAlone = both.length === 0 ? "" : `${both.join("; ")}. Remove one of the two by hand in ${both.length === 1 ? "that note" : "those notes"}.`;
 		if (todo.length === 0) {
 			await this.plugin.saveSettings();
-			new Notice("No notes use an old property name or an old Kind note key.");
+			new Notice(
+				leftAlone === "" ? "No notes use an old property name or an old Kind note key." : `Nothing to rename. ${leftAlone}`,
+				leftAlone === "" ? undefined : 10000,
+			);
 			return;
 		}
-		const lines = todo.map((t) => `${t.from} becomes ${t.to} in ${t.where}`).join("; ");
+		const lines = todo
+			.map((t) => `${t.from} becomes ${t.to} in ${t.key === undefined ? `${plural(t.files.length, true)} (${names(t.files)})` : plural(t.files.length)}`)
+			.join("; ");
 		const ok = await confirm(
 			this.app,
 			"Rename properties in existing notes?",
-			`${lines}. Only the property's name changes; its value stays. A note that already has the new name is skipped. Views inside existing Map and Kind notes are not changed.`,
+			`${lines}. Only the property's name changes; its value stays. Views inside existing Map and Kind notes are not changed.${leftAlone === "" ? "" : ` Not renamed: ${leftAlone}`}`,
 			"Rename",
 		);
 		if (!ok) return;
@@ -322,11 +337,13 @@ export class AceSettingTab extends PluginSettingTab {
 				if (r.skipped.length > 0) line += `, skipped ${r.skipped.length} that already have ${t.to} (${r.skipped.join(", ")})`;
 				if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
 				out.push(line);
-				if (t.key !== undefined && r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
+				// Keep the old name on record while any note still carries it.
+				if (t.key !== undefined && t.clash === 0 && r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
 			} catch (e) {
 				out.push(`${t.from} to ${t.to} failed: ${e instanceof Error ? e.message : String(e)}`);
 			}
 		}
+		if (leftAlone !== "") out.push(`Not renamed: ${leftAlone}`);
 		await this.plugin.saveSettings();
 		new Notice(out.join("\n"), 10000);
 		this.update();

@@ -284,24 +284,24 @@ Open Settings, then ACE Actions. Change one thing at a time and put it back afte
 Three seeded Kind notes carry old keys: Widget (\`default_up\`), Sketch (\`default_up\` and \`default_status\`), Relic (\`default_up\` and \`default_map\` together, plus an empty \`default_colour\`).
 - [ ] In Settings, Kinds, expect a ⚠ on Widget, Sketch and Relic. Edit Widget: expect the Problems line "default_up is an old key. Rename it to default_map." with a Rename button. Cancel.
 - [ ] Edit Relic: expect a Rename button on default_up and a Delete button on default_colour. Press Delete: expect "Deleted default_colour" and the line to go. Press Rename: expect a notice that Relic already has default_map and nothing renamed. Change the folder, then press Rename: expect "Save or cancel your changes first." Cancel.
-- [ ] Under Property names, press Check notes. Expect a window saying default_up becomes default_map in 3 Kind notes (Relic, Sketch, Widget) and default_status becomes status_default in 1 Kind note (Sketch). Press Rename.
-- [ ] Expect a notice: default_up renamed in 2 notes, skipped 1 that already has default_map (Relic); default_status renamed in 1 note.
+- [ ] Under Property names, press Check notes. Expect a window saying default_up becomes default_map in 2 Kind notes (Sketch, Widget) and default_status becomes status_default in 1 Kind note (Sketch), and "Not renamed: Relic has both default_up and default_map. Remove one of the two by hand in that note." Press Rename.
+- [ ] Expect a notice: default_up renamed in 2 notes; default_status renamed in 1 note; and the same "Not renamed: Relic has both…" line.
 - [ ] Edit Relic, open the note with Open note, delete \`default_map\` by hand, then edit Relic again and press Rename on default_up. Expect "Renamed default_up to default_map", the Problems list to empty, and Default Map to show People.
 - [ ] Open the Widget note: expect \`default_map: Software\` in the same place default_up was. Open Sketch: expect \`default_map: Ideas\` and \`status_default: draft\`. Open Relic: expect it unchanged (both keys still there, \`default_colour\` still empty).
 - [ ] Run New note, pick Widget. Expect Software listed first in the Map picker. Escape.
-- [ ] Press Check notes again. Expect the window to list only Relic's default_up. Cancel. Delete \`default_up\` from Relic by hand, press Check notes: expect "No notes use an old property name or an old Kind note key."
+- [ ] Press Check notes again. Expect no window, only the notice "Nothing to rename. Relic has both default_up and default_map. Remove one of the two by hand in that note." Delete \`default_up\` from Relic by hand, press Check notes: expect "No notes use an old property name or an old Kind note key."
 
 ## Property names
 Open Settings, then ACE Actions, then Property names. Put every name back at the end.
 - [ ] Change Kind property to \`type\`. Run New note, pick Concept, name it "Typed note". Expect \`type: [[Concept]]\` and no \`kind\` property.
 - [ ] Open [[Idempotency]] (it still has \`kind\`). Run File by kind or Set kind: expect the plugin not to know its kind (Set kind does not list Concept first).
-- [ ] Press Check notes. Expect a window saying kind becomes type in N notes. Press Rename. Expect a notice with the number renamed and 1 skipped: "Has type already".
+- [ ] Press Check notes. Expect a window saying kind becomes type in N notes. Expect the window to add "Not renamed: Has type already has both kind and type." Press Rename. Expect a notice with the number renamed and the same Not renamed line.
 - [ ] Open [[Idempotency]]: expect \`type: [[Concept]]\` in the place \`kind\` was. Open [[Inbox/Has type already]]: expect both \`kind\` and \`type: draft\` unchanged.
 - [ ] Edit any Kind and press Add field (or New field): type \`type\`. Expect "ACE writes type itself." Type \`kind\`: expect it to be allowed. Cancel.
 - [ ] Open the About ACE guide. Expect "A note's \`type\` property" and \`type\` first in the reserved names.
 - [ ] Change Map property to \`type\` too. Expect a notice that the name is already used and that it is still using \`up\`.
 - [ ] Change Map property to \`parent\`. Open [[Inbox/Meeting notes]], run Add to Map, pick Software. Expect \`parent: ["[[Software]]"]\`. Run New Map, name it "Parents": expect its view to still work for notes that use \`parent\`.
-- [ ] Put it back: clear Kind property and Map property (blank means the default). Press Check notes: expect type becomes kind and parent becomes up. Press Rename. Expect "Has type already" skipped again. Open [[Idempotency]]: expect \`kind\` back.
+- [ ] Put it back: clear Kind property and Map property (blank means the default). Press Check notes: expect type becomes kind and parent becomes up. Press Rename. Expect "Has type already" listed as not renamed again. Open [[Idempotency]]: expect \`kind\` back.
 - [ ] Change Intensity property to \`heat\`. Run New effort (any name, on, Single note). Expect \`heat: on\`. Clear the setting, press Check notes and Rename: expect that effort to have \`intensity: on\`.
 
 ## Existing structure
