@@ -161,7 +161,8 @@ export interface Problem {
   text: string;
   fix?: ProblemFix;
   // An old key on the Kind note the editor can rename (or delete, when `to` is null) with one button.
-  keyFix?: { from: string; to: string | null };
+  // `label` replaces the button's usual text.
+  keyFix?: { from: string; to: string | null; label?: string };
 }
 
 export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx: ProblemContext): Problem[] {
@@ -198,6 +199,12 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
     if (to === null) continue;
     if (isEmptyValue(fm[key])) {
       out.push({ text: `${key} is an old, empty key. Delete it.`, keyFix: { from: key, to: null } });
+    } else if (Object.prototype.hasOwnProperty.call(fm, to)) {
+      // Both are on the note: renaming would overwrite the new key, so offer to drop the old one.
+      out.push({
+        text: `${key} is an old key, and ${to} is already set. Remove ${key}; ${to} stays as it is.`,
+        keyFix: { from: key, to: null, label: "Remove old" },
+      });
     } else {
       out.push({
         text: key === "default_up"

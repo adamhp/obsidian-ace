@@ -124,6 +124,24 @@ export class Ace {
 		return [...out.values()];
 	}
 
+	// Removes property `old` from each note, but only where `keep` is also on the note.
+	async removeOldProperty(files: TFile[], old: string, keep: string): Promise<{ removed: number; failed: string[] }> {
+		let removed = 0;
+		const failed: string[] = [];
+		for (const f of files) {
+			try {
+				await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {
+					if (!Object.prototype.hasOwnProperty.call(fm, keep) || !Object.prototype.hasOwnProperty.call(fm, old)) return;
+					delete fm[old];
+					removed++;
+				});
+			} catch {
+				failed.push(f.basename);
+			}
+		}
+		return { removed, failed };
+	}
+
 	notesWithProperty(name: string): TFile[] {
 		return this.app.vault
 			.getMarkdownFiles()

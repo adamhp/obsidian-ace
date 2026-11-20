@@ -283,13 +283,12 @@ Open Settings, then ACE Actions. Change one thing at a time and put it back afte
 ## Old Kind note keys
 Three seeded Kind notes carry old keys: Widget (\`default_up\`), Sketch (\`default_up\` and \`default_status\`), Relic (\`default_up\` and \`default_map\` together, plus an empty \`default_colour\`).
 - [ ] In Settings, Kinds, expect a ⚠ on Widget, Sketch and Relic. Edit Widget: expect the Problems line "default_up is an old key. Rename it to default_map." with a Rename button. Cancel.
-- [ ] Edit Relic: expect a Rename button on default_up and a Delete button on default_colour. Press Delete: expect "Deleted default_colour" and the line to go. Press Rename: expect a notice that Relic already has default_map and nothing renamed. Change the folder, then press Rename: expect "Save or cancel your changes first." Cancel.
-- [ ] Under Property names, press Check notes. Expect a window saying default_up becomes default_map in 2 Kind notes (Sketch, Widget) and default_status becomes status_default in 1 Kind note (Sketch), and "Not renamed: Relic has both default_up and default_map. Remove one of the two by hand in that note." Press Rename.
-- [ ] Expect a notice: default_up renamed in 2 notes; default_status renamed in 1 note; and the same "Not renamed: Relic has both…" line.
-- [ ] Edit Relic, open the note with Open note, delete \`default_map\` by hand, then edit Relic again and press Rename on default_up. Expect "Renamed default_up to default_map", the Problems list to empty, and Default Map to show People.
+- [ ] Edit Relic: expect "default_up is an old key, and default_map is already set." with a Remove old button, and a Delete button on default_colour. Press Delete: expect "Deleted default_colour" and the line to go. Change the folder, then press Remove old: expect "Save or cancel your changes first." Cancel. Leave default_up for the next steps.
+- [ ] Under Property names, press Check notes. Expect a window saying default_up becomes default_map in 2 Kind notes (Sketch, Widget) and default_status becomes status_default in 1 Kind note (Sketch), Press Rename. Expect a second window, "Remove old keys from Kind notes?", saying Relic has default_up (People) and default_map (Places). Press Cancel.
+- [ ] Expect a notice: default_up renamed in 2 notes; default_status renamed in 1 note.
 - [ ] Open the Widget note: expect \`default_map: Software\` in the same place default_up was. Open Sketch: expect \`default_map: Ideas\` and \`status_default: draft\`. Open Relic: expect it unchanged (both keys still there, \`default_colour\` still empty).
 - [ ] Run New note, pick Widget. Expect Software listed first in the Map picker. Escape.
-- [ ] Press Check notes again. Expect no window, only the notice "Nothing to rename. Relic has both default_up and default_map. Remove one of the two by hand in that note." Delete \`default_up\` from Relic by hand, press Check notes: expect "No notes use an old property name or an old Kind note key."
+- [ ] Press Check notes again. Expect only the "Remove old keys from Kind notes?" window for Relic. Press Remove old. Expect "Removed default_up from 1 Kind note". Open Relic: expect \`default_map: Places\` and no \`default_up\`. Press Check notes: expect "No notes use an old property name or an old Kind note key."
 
 ## Property names
 Open Settings, then ACE Actions, then Property names. Put every name back at the end.

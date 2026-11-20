@@ -287,6 +287,32 @@ export class AceSettingTab extends PluginSettingTab {
 	}
 
 	// Renames each changed property in the notes that still use its old name, after asking.
+	// Asks, then removes old keys from Kind notes that already have the new key. Returns the result line, or null if cancelled.
+	private async removeOldKeys(items: { from: string; to: string; files: TFile[] }[]): Promise<string | null> {
+		const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
+		const lines = items.flatMap((t) =>
+			t.files.map((f) => {
+				const fm = this.ace.fm(f);
+				return `${f.basename} has ${t.from} (${show(fm[t.from])}) and ${t.to} (${show(fm[t.to])})`;
+			}),
+		);
+		const ok = await confirm(
+			this.app,
+			"Remove old keys from Kind notes?",
+			`${lines.join("; ")}. The old key and its value are removed. The new key stays as it is.`,
+			"Remove old",
+		);
+		if (!ok) return null;
+		const out: string[] = [];
+		for (const t of items) {
+			const r = await this.ace.removeOldProperty(t.files, t.from, t.to);
+			let line = `Removed ${t.from} from ${r.removed === 1 ? "1 Kind note" : `${r.removed} Kind notes`}`;
+			if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
+			out.push(line);
+		}
+		return out.join("\n");
+	}
+
 	private async renameInNotes(): Promise<void> {
 		const plural = (n: number, kind = false) => (n === 1 ? `1 ${kind ? "Kind note" : "note"}` : `${n} ${kind ? "Kind notes" : "notes"}`);
 		const names = (files: TFile[]) => files.map((f) => f.basename).join(", ");
@@ -303,16 +329,25 @@ export class AceSettingTab extends PluginSettingTab {
 		// A note that already has the new name can't be renamed without losing a value: report it, don't offer it.
 		const todo: ((typeof found)[number] & { clash: number })[] = [];
 		const both: string[] = [];
+		// Kind notes that have an old key and its new one: the old key can be removed, after asking.
+		const removable: { from: string; to: string; files: TFile[] }[] = [];
 		for (const t of found) {
 			const has = (f: TFile) => Object.prototype.hasOwnProperty.call(this.ace.fm(f), t.to);
 			const clash = t.files.filter(has);
 			const files = t.files.filter((f) => !has(f));
-			if (clash.length > 0) both.push(`${names(clash)} ${clash.length === 1 ? "has" : "have"} both ${t.from} and ${t.to}`);
+			if (clash.length > 0 && t.key === undefined) removable.push({ from: t.from, to: t.to, files: clash });
+			else if (clash.length > 0) both.push(`${names(clash)} ${clash.length === 1 ? "has" : "have"} both ${t.from} and ${t.to}`);
 			if (files.length > 0) todo.push({ ...t, files, clash: clash.length });
 		}
 		const leftAlone = both.length === 0 ? "" : `${both.join("; ")}. Remove one of the two by hand in ${both.length === 1 ? "that note" : "those notes"}.`;
 		if (todo.length === 0) {
 			await this.plugin.saveSettings();
+			if (removable.length > 0) {
+				const done = await this.removeOldKeys(removable);
+				if (done !== null) new Notice([done, leftAlone === "" ? "" : `Not renamed: ${leftAlone}`].filter((x) => x !== "").join("\n"), 10000);
+				this.update();
+				return;
+			}
 			new Notice(
 				leftAlone === "" ? "No notes use an old property name or an old Kind note key." : `Nothing to rename. ${leftAlone}`,
 				leftAlone === "" ? undefined : 10000,
@@ -344,6 +379,10 @@ export class AceSettingTab extends PluginSettingTab {
 			}
 		}
 		if (leftAlone !== "") out.push(`Not renamed: ${leftAlone}`);
+		if (removable.length > 0) {
+			const done = await this.removeOldKeys(removable);
+			if (done !== null) out.push(done);
+		}
 		await this.plugin.saveSettings();
 		new Notice(out.join("\n"), 10000);
 		this.update();

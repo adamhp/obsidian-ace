@@ -248,7 +248,7 @@ export class KindEditorModal extends Modal {
 			const li = ul.createEl("li", { text: p.text });
 			const keyFix = p.keyFix;
 			if (keyFix) {
-				const b = li.createEl("button", { text: keyFix.to === null ? "Delete" : "Rename", cls: "ace-problem-fix" });
+				const b = li.createEl("button", { text: keyFix.label ?? (keyFix.to === null ? "Delete" : "Rename"), cls: "ace-problem-fix" });
 				b.addEventListener("click", () => void this.fixKey(keyFix.from, keyFix.to));
 			}
 			const fix = p.fix;

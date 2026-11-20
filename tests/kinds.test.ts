@@ -190,6 +190,16 @@ describe("old key fixes", () => {
   });
 });
 
+describe("old key beside its new key", () => {
+  it("offers to remove the old one, not rename it", () => {
+    const ctx = { folderExists: () => true, fileExists: () => true, mapNames: ["Places"], reserved: R };
+    const fm = { default_up: "People", default_map: "Places" };
+    expect(kindProblems(draftFromFrontmatter(fm), fm, ctx)).toEqual([
+      { text: "default_up is an old key, and default_map is already set. Remove default_up; default_map stays as it is.", keyFix: { from: "default_up", to: null, label: "Remove old" } },
+    ]);
+  });
+});
+
 describe("oldKindKey", () => {
   it("maps old keys to their current names", () => {
     expect(oldKindKey("default_up")).toBe("default_map");
