@@ -14,7 +14,7 @@ describe("parseKindConfig", () => {
     expect(parseKindConfig("Pet", undefined)).toEqual({ name: "Pet", folder: "Atlas/Dots", isSource: false, defaultUp: null, fields: [], template: null, titleTemplate: null, fieldOptions: {}, fieldDefaults: {} });
   });
   it("handles empty/null and links", () => {
-    const c = parseKindConfig("Person", { default_up: "[[People]]", folder: "", status_options: null });
+    const c = parseKindConfig("Person", { default_map: "[[People]]", folder: "", status_options: null });
     expect(c.defaultUp).toBe("People");
     expect(c.folder).toBe("Atlas/Dots");
     expect(c.fieldOptions).toEqual({});

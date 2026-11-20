@@ -72,7 +72,7 @@ describe("fieldNameError", () => {
 
 describe("draft", () => {
   it("round trips", () => {
-    const fm: Record<string, unknown> = { title: "Book", folder: "Atlas/Sources/Books", is_source: true, default_up: "Reading List",
+    const fm: Record<string, unknown> = { title: "Book", folder: "Atlas/Sources/Books", is_source: true, default_map: "Reading List",
       fields: ["status", "author"], status_options: ["to read", "done"], status_default: "to read", extra: 1 };
     const d = draftFromFrontmatter(fm);
     const d0 = structuredClone(d);
@@ -89,7 +89,7 @@ describe("draft", () => {
     const shapes: Record<string, unknown>[] = [
       { fields: "author" },
       { fields: ["x"], x_default: 5 },
-      { default_up: "[[People]]" },
+      { default_map: "[[People]]" },
       { is_source: "yes" },
       { fields: ["x"], x_options: [1, 2] },
       { fields: ["a", "b"], a_options: ["p"], b_default: true, title_template: "{{a}}", template: "T.md" },
@@ -102,12 +102,12 @@ describe("draft", () => {
     }
   });
   it("changing one default changes only that key", () => {
-    const fm: Record<string, unknown> = { fields: ["a", "b"], a_default: 5, b_default: "x", default_up: "[[People]]" };
+    const fm: Record<string, unknown> = { fields: ["a", "b"], a_default: 5, b_default: "x", default_map: "[[People]]" };
     const d0 = draftFromFrontmatter(fm);
     const d = structuredClone(d0);
     d.fields[1].default = "y";
     applyDraft(fm, d, d0);
-    expect(fm).toEqual({ fields: ["a", "b"], a_default: 5, b_default: "y", default_up: "[[People]]" });
+    expect(fm).toEqual({ fields: ["a", "b"], a_default: 5, b_default: "y", default_map: "[[People]]" });
   });
 });
 
@@ -165,6 +165,16 @@ describe("renamed ACE properties", () => {
     expect(kindProblems(d, {}, ctx).map((p) => p.text)).toEqual([
       "Field Type is a property ACE writes itself. Rename the field, or change the property name in settings.",
     ]);
+  });
+});
+
+describe("default_up", () => {
+  it("is no longer read, and is flagged", () => {
+    const ctx = { folderExists: () => true, fileExists: () => true, mapNames: [], reserved: R };
+    const fm = { default_up: "People" };
+    expect(draftFromFrontmatter(fm).defaultUp).toBeNull();
+    expect(kindProblems(draftFromFrontmatter(fm), fm, ctx).map((p) => p.text)).toEqual(["default_up is an old key. Rename it to default_map."]);
+    expect(kindProblems(draftFromFrontmatter({ default_map: "x" }), { default_map: "x" }, { ...ctx, mapNames: ["x"] })).toEqual([]);
   });
 });
 

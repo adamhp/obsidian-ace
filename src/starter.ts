@@ -63,7 +63,7 @@ export function kindNoteBody(s: AceSettings): string {
 Kind note keys (frontmatter above). All are optional.
 folder: where new notes of this kind are filed (blank = ${s.defaultFolder})
 is_source: true to ask for a link and write "${s.props.source}"
-default_up: name of the Map to suggest first when picking a Map
+default_map: name of the Map to suggest first when picking a Map
 fields: properties asked for when you create a note of this kind (or set its kind)
 <field>_options: list of choices for that field
 <field>_default: value filled in or listed first for that field

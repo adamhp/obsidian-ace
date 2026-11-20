@@ -89,7 +89,7 @@ export function draftFromFrontmatter(fm: Record<string, unknown>): KindDraft {
   return {
     folder: str(fm.folder) ?? "",
     isSource: src === true || (typeof src === "string" && src.trim().toLowerCase() === "true"),
-    defaultUp: linkTarget(fm.default_up),
+    defaultUp: linkTarget(fm.default_map),
     fields: strList(fm.fields).map((name) => ({
       name,
       options: strList(fm[`${name}_options`]),
@@ -115,7 +115,7 @@ export function applyDraft(fm: Record<string, unknown>, draft: KindDraft, initia
   if (draft.folder !== initial.folder) setOrDelete(fm, "folder", draft.folder, draft.folder === "");
   if (draft.isSource !== initial.isSource) setOrDelete(fm, "is_source", true, !draft.isSource);
   if (draft.defaultUp !== initial.defaultUp) {
-    setOrDelete(fm, "default_up", draft.defaultUp, draft.defaultUp === null || draft.defaultUp === "");
+    setOrDelete(fm, "default_map", draft.defaultUp, draft.defaultUp === null || draft.defaultUp === "");
   }
   const names = draft.fields.map((f) => f.name);
   const oldNames = initial.fields.map((f) => f.name);
@@ -186,7 +186,9 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
   }
   for (const key of Object.keys(fm)) {
     const m = /^default_(.+)$/.exec(key);
-    if (m && key !== "default_up") {
+    if (key === "default_up") {
+      say("default_up is an old key. Rename it to default_map.");
+    } else if (m && key !== "default_map") {
       say(isEmptyValue(fm[key])
         ? `${key} is an old, empty key. Delete it.`
         : `${key} looks like an old key. Rename it to ${m[1]}_default.`);

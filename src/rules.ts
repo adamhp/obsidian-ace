@@ -256,7 +256,7 @@ export function parseKindConfig(
     name,
     folder: folder === "" ? defaultFolder : folder,
     isSource: src === true || (typeof src === "string" && src.trim().toLowerCase() === "true"),
-    defaultUp: linkTarget(f.default_up),
+    defaultUp: linkTarget(f.default_map),
     fields,
     template: templatePath(f.template),
     titleTemplate: str(f.title_template),

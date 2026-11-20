@@ -48,7 +48,7 @@ describe("starter", () => {
     expect(kindNoteBody(s)).toContain("blank = Notes/Dots");
   });
   it("kind note body mentions every key", () => {
-    for (const k of ["folder", "is_source", "default_up", "fields", "template", "title_template"]) {
+    for (const k of ["folder", "is_source", "default_map", "fields", "template", "title_template"]) {
       expect(kindNoteBody(s)).toContain(`${k}:`);
     }
     expect(kindNoteBody(s)).toContain("<field>_options:");

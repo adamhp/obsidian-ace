@@ -23,7 +23,7 @@ A kind exists if `<Kinds folder>/<name>.md` exists (default `Atlas/Kinds/<name>.
 |---|---|---|
 | `folder` | where notes of this kind are filed | `Atlas/Dots` |
 | `is_source` | asks for a link and writes `source` | false |
-| `default_up` | name of the Map suggested first in the picker | none |
+| `default_map` | name of the Map suggested first in the picker | none |
 | `fields` | properties asked for when you create a note of this kind or set its kind, e.g. `[status, author]` | none |
 | `<field>_options` | list of choices for that field, e.g. `status_options` | none |
 | `<field>_default` | value filled in or listed first for that field, e.g. `status_default` | none |
@@ -65,6 +65,8 @@ The **Create starter kinds** button adds the standard Kind notes and the Map kin
 Under Kinds, each kind has an **Edit** button that opens an editor for its folder, source flag, default Map, fields (with options and defaults), title template and template. Save writes only those keys to the Kind note in one edit and leaves the body alone; Cancel writes nothing. A Problems list warns about things like a missing folder or a default that isn't one of the options, but doesn't block Save. A missing folder, default Map or template file gets a **Create** button that makes it straight away (never overwriting anything). The editor can also open, rename or delete the Kind note. Deleting asks first, removes the `kind` property from the notes that use it, and sends the Kind note to the trash. **New kind** creates a Kind note and opens the editor. The folder button at the top right of Kinds (**Create missing folders**) creates every kind's folder that doesn't exist yet. A faint count beside it shows how many are missing.
 
 ## Migrating from the hard-coded version
+
+Kind notes use `default_map` where they used `default_up`. Rename the key on each Kind note that has it; the Kind editor lists it under Problems until you do.
 
 Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
 

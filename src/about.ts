@@ -54,6 +54,6 @@ title_template: "{{first_name}} {{last_name}}"
 ### Reserved names
 
 - **Not allowed as field names:** ${reserved}. The plugin writes these properties itself. You can rename them under Property names below.
-- **Read on Kind notes:** \`folder\`, \`is_source\`, \`default_up\`, \`fields\`, \`title_template\`, \`template\`, and any \`<field>_options\` or \`<field>_default\`.
+- **Read on Kind notes:** \`folder\`, \`is_source\`, \`default_map\`, \`fields\`, \`title_template\`, \`template\`, and any \`<field>_options\` or \`<field>_default\`.
 `;
 }
