@@ -112,36 +112,6 @@ The Map kind is not a starter kind. The plugin creates its Kind note by default 
 
 Under Kinds, each kind has an **Edit** button that opens an editor for its folder, source flag, default Map, fields (with options and defaults), title template and template. Save writes only those keys to the Kind note in one edit and leaves the body alone; Cancel writes nothing. A Problems list warns about things like a missing folder or a default that isn't one of the options, but doesn't block Save. A missing folder, default Map or template file gets a **Create** button that makes it straight away (never overwriting anything). An old key gets a **Rename** button, **Delete** when it is empty, or **Remove old** when the new key is already on the note; these change the Kind note straight away, so save or cancel your other edits first. The editor can also open, rename or delete the Kind note. Deleting asks first, removes the `kind` property from the notes that use it, and sends the Kind note to the trash. **New kind** creates a Kind note and opens the editor. The folder button at the top right of Kinds (**Create missing folders**) creates every kind's folder that doesn't exist yet. A faint count beside it shows how many are missing.
 
-## Migrating from the hard-coded version
-
-Kind notes use `default_map` where they used `default_up`. The Kind editor lists it under Problems until it is renamed. **Check notes** (Settings, Property names) renames old Kind note keys for you: `default_up` to `default_map`, and `default_<field>` to `<field>_default`. You can also rename them by hand.
-
-Make effort no longer changes a note's status. The Templater version set an Idea to `working` or `selected`; set the status by hand instead.
-
-Kind notes no longer use `default_status` as a built-in key. For Article, Book, Idea, Movie and Product, add `status` first in `fields` and rename `default_status` to `status_default` (`status_options` keeps its name). For List and Library the two keys are empty, so delete them; do not add `status`.
-
 ## Filing rule
 
 A note moves to its kind's `folder` unless it is anywhere inside the Efforts folder. This applies to every kind. It never overwrites: if the target path exists, the note stays and a Notice says why. Moves use `fileManager.renameFile`, so links update.
-
-## Dev loop
-
-```
-npm install
-npm run dev     # watch build into the dev vault
-npm run seed    # fill the dev vault with sample notes
-```
-
-Open the dev vault in Obsidian (`C:\Users\adamp\Documents\ACE Dev Vault`) and enable community plugins if prompted. Hot Reload reloads the plugin on each build. Then follow `Home.md` in the vault.
-
-`ACE_VAULT` overrides the vault path for `dev`, `seed` and `check-vault`. Default: `/mnt/c/Users/adamp/Documents/ACE Dev Vault`.
-
-`npm run check-vault` checks that every note's frontmatter parses and no Templater syntax remains. It is read-only.
-
-## Adding a command
-
-Add one file in `src/commands` exporting an `AceCommand`, then add it to the `COMMANDS` array in `src/commands/index.ts`.
-
-## Tests
-
-`npm test` runs the Vitest unit tests for the pure logic in `src/rules.ts`. `npm run build` typechecks and builds.
