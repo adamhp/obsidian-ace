@@ -160,6 +160,8 @@ export interface ProblemFix {
 export interface Problem {
   text: string;
   fix?: ProblemFix;
+  // An old key on the Kind note the editor can rename (or delete, when `to` is null) with one button.
+  keyFix?: { from: string; to: string | null };
 }
 
 export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx: ProblemContext): Problem[] {
@@ -194,12 +196,15 @@ export function kindProblems(draft: KindDraft, fm: Record<string, unknown>, ctx:
   for (const key of Object.keys(fm)) {
     const to = oldKindKey(key);
     if (to === null) continue;
-    if (key === "default_up") {
-      say("default_up is an old key. Rename it to default_map.");
+    if (isEmptyValue(fm[key])) {
+      out.push({ text: `${key} is an old, empty key. Delete it.`, keyFix: { from: key, to: null } });
     } else {
-      say(isEmptyValue(fm[key])
-        ? `${key} is an old, empty key. Delete it.`
-        : `${key} looks like an old key. Rename it to ${to}.`);
+      out.push({
+        text: key === "default_up"
+          ? "default_up is an old key. Rename it to default_map."
+          : `${key} looks like an old key. Rename it to ${to}.`,
+        keyFix: { from: key, to },
+      });
     }
   }
   for (const key of Object.keys(fm)) {

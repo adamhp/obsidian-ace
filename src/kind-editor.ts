@@ -1,7 +1,7 @@
 import { AbstractInputSuggest, App, Modal, Notice, Setting, TFile, TFolder, getFrontMatterInfo, parseYaml } from "obsidian";
 import type { Ace } from "./vault";
 import { FieldDraft, KindDraft, applyDraft, draftFromFrontmatter, fieldNameError, kindProblems, propType } from "./kinds";
-import { cleanName, isTaken } from "./rules";
+import { cleanName, isTaken, renameKey } from "./rules";
 import { ask, confirm } from "./ui";
 
 class PathSuggest extends AbstractInputSuggest<string> {
@@ -246,6 +246,11 @@ export class KindEditorModal extends Modal {
 		const ul = el.createEl("ul", { cls: "mod-warning" });
 		for (const p of list) {
 			const li = ul.createEl("li", { text: p.text });
+			const keyFix = p.keyFix;
+			if (keyFix) {
+				const b = li.createEl("button", { text: keyFix.to === null ? "Delete" : "Rename", cls: "ace-problem-fix" });
+				b.addEventListener("click", () => void this.fixKey(keyFix.from, keyFix.to));
+			}
 			const fix = p.fix;
 			if (!fix) continue;
 			const label = fix.type === "folder" ? "Create folder" : fix.type === "map" ? "Create Map" : "Create file";
@@ -260,6 +265,39 @@ export class KindEditorModal extends Modal {
 				this.renderProblems();
 			});
 		}
+	}
+
+	// Renames an old key on the Kind note (or deletes it when `to` is null), then reloads the editor from the note.
+	private async fixKey(from: string, to: string | null): Promise<void> {
+		if (this.dirty()) {
+			new Notice("Save or cancel your changes first.");
+			return;
+		}
+		const change = (fm: Record<string, unknown>): string => {
+			if (to !== null) return renameKey(fm, from, to);
+			delete fm[from];
+			return "deleted";
+		};
+		let result = "";
+		try {
+			await this.app.fileManager.processFrontMatter(this.file, (fm: Record<string, unknown>) => {
+				result = change(fm);
+			});
+		} catch (e) {
+			new Notice(`Couldn't change ${from}: ${e instanceof Error ? e.message : String(e)}`, 10000);
+			return;
+		}
+		if (result === "taken") {
+			new Notice(`${this.file.basename} already has ${to}, so ${from} was not renamed. Remove one of them in the note.`, 10000);
+			return;
+		}
+		new Notice(to === null ? `Deleted ${from}` : `Renamed ${from} to ${to}`);
+		// The metadata cache lags the write, so apply the same change to the copy the editor holds.
+		change(this.fm);
+		this.draft = draftFromFrontmatter(this.fm);
+		this.initialDraft = structuredClone(this.draft);
+		this.render();
+		this.onDone();
 	}
 
 	private async save(): Promise<void> {

@@ -178,6 +178,18 @@ describe("default_up", () => {
   });
 });
 
+describe("old key fixes", () => {
+  it("offers a rename or a delete for each old key", () => {
+    const ctx = { folderExists: () => true, fileExists: () => true, mapNames: ["People"], reserved: R };
+    const fm = { default_up: "People", default_status: "x", default_colour: null };
+    expect(kindProblems(draftFromFrontmatter(fm), fm, ctx).map((p) => p.keyFix)).toEqual([
+      { from: "default_up", to: "default_map" },
+      { from: "default_status", to: "status_default" },
+      { from: "default_colour", to: null },
+    ]);
+  });
+});
+
 describe("oldKindKey", () => {
   it("maps old keys to their current names", () => {
     expect(oldKindKey("default_up")).toBe("default_map");
