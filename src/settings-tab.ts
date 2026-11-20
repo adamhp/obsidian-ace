@@ -2,7 +2,7 @@ import { App, Component, MarkdownRenderer, Notice, PluginSettingTab, SettingDefi
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
-import { ask } from "./ui";
+import { ask, confirm } from "./ui";
 import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
 import { aboutMarkdown } from "./about";
@@ -71,7 +71,11 @@ export class AceSettingTab extends PluginSettingTab {
 				new Notice(`${PROP_LABELS[k]}: ${error} Still using "${this.s.props[k]}".`);
 				return;
 			}
+			// Remember the name notes still carry, so "Rename in existing notes" can find them.
+			const from = this.s.renamedFrom[k] ?? this.s.props[k];
 			this.s.props[k] = v.trim();
+			if (from === this.s.props[k]) delete this.s.renamedFrom[k];
+			else this.s.renamedFrom[k] = from;
 			await this.plugin.saveSettings();
 			return;
 		}
@@ -262,6 +266,47 @@ export class AceSettingTab extends PluginSettingTab {
 		};
 	}
 
+	// Renames each changed property in the notes that still use its old name, after asking.
+	private async renameInNotes(): Promise<void> {
+		const plural = (n: number) => (n === 1 ? "1 note" : `${n} notes`);
+		const todo: { key: PropKey; from: string; to: string; count: number }[] = [];
+		for (const key of PROP_KEYS) {
+			const from = this.s.renamedFrom[key];
+			if (from === undefined) continue;
+			const count = this.ace.notesWithProperty(from).length;
+			if (count > 0) todo.push({ key, from, to: this.s.props[key], count });
+			else delete this.s.renamedFrom[key];
+		}
+		if (todo.length === 0) {
+			await this.plugin.saveSettings();
+			new Notice("No notes use an old property name.");
+			return;
+		}
+		const lines = todo.map((t) => `${t.from} becomes ${t.to} in ${plural(t.count)}`).join("; ");
+		const ok = await confirm(
+			this.app,
+			"Rename properties in existing notes?",
+			`${lines}. Only the property's name changes; its value stays. A note that already has the new name is skipped. Views inside existing Map and Kind notes are not changed.`,
+			"Rename",
+		);
+		if (!ok) return;
+		const out: string[] = [];
+		for (const t of todo) {
+			try {
+				const r = await this.ace.renameProperty(t.from, t.to);
+				let line = `${t.from} to ${t.to}: renamed in ${plural(r.renamed)}`;
+				if (r.skipped.length > 0) line += `, skipped ${r.skipped.length} that already have ${t.to} (${r.skipped.join(", ")})`;
+				if (r.failed.length > 0) line += `, failed in ${r.failed.length} (${r.failed.join(", ")})`;
+				out.push(line);
+				if (r.skipped.length === 0 && r.failed.length === 0) delete this.s.renamedFrom[t.key];
+			} catch (e) {
+				out.push(`${t.from} to ${t.to} failed: ${e instanceof Error ? e.message : String(e)}`);
+			}
+		}
+		await this.plugin.saveSettings();
+		new Notice(out.join("\n"), 10000);
+	}
+
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		return [
 			this.about(),
@@ -293,7 +338,7 @@ export class AceSettingTab extends PluginSettingTab {
 				items: [
 					{
 						name: "These are the properties ACE writes on your notes.",
-						desc: "Changing a name affects what ACE reads and writes from now on. Properties already in your notes, and views in existing Map and Kind notes, keep the old name until you rename them (Obsidian's All properties view can rename a property everywhere).",
+						desc: "Changing a name affects what ACE reads and writes from now on. Properties already in your notes keep the old name until you press Check notes below. Views inside existing Map and Kind notes keep the old name until you edit them.",
 						searchable: false,
 					},
 					...PROP_KEYS.map(
@@ -303,6 +348,13 @@ export class AceSettingTab extends PluginSettingTab {
 							control: { type: "text", key: PROP_PREFIX + k, placeholder: DEFAULT_SETTINGS.props[k] },
 						}),
 					),
+					{
+						name: "Rename in existing notes",
+						desc: "After changing a name above, renames the old property in every note that has it. Shows how many notes will change and asks first.",
+						render: (setting) => {
+							setting.addButton((b) => b.setButtonText("Check notes").onClick(() => void this.renameInNotes()));
+						},
+					},
 				],
 			},
 			{

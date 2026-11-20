@@ -41,6 +41,8 @@ export interface AceSettings {
   dateFormat: string;
   timeFormat: string;
   props: PropNames;
+  // For each renamed property, the name notes may still carry. Cleared once no note uses it.
+  renamedFrom: Partial<Record<PropKey, string>>;
 }
 
 // Built-in effort bodies, used when no template file is set or it's missing.
@@ -61,7 +63,29 @@ export const DEFAULT_SETTINGS: AceSettings = {
   dateFormat: "YYYY-MM-DD",
   timeFormat: "HH:mm",
   props: { kind: "kind", up: "up", source: "source", effort: "effort", intensity: "intensity", from: "from" },
+  renamedFrom: {},
 };
+
+// Renames a property in place, keeping its position. Returns "renamed", "absent" (no such property)
+// or "taken" (the new name is already on the note, so nothing changes).
+export function renameKey(fm: Record<string, unknown>, from: string, to: string): "renamed" | "absent" | "taken" {
+  if (!Object.prototype.hasOwnProperty.call(fm, from)) return "absent";
+  if (Object.prototype.hasOwnProperty.call(fm, to)) return "taken";
+  const entries = Object.entries(fm);
+  for (const [k] of entries) delete fm[k];
+  for (const [k, v] of entries) fm[k === from ? to : k] = v;
+  return "renamed";
+}
+
+function normalizeRenamedFrom(raw: unknown, props: PropNames): Partial<Record<PropKey, string>> {
+  const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const out: Partial<Record<PropKey, string>> = {};
+  for (const k of PROP_KEYS) {
+    const v = r[k];
+    if (typeof v === "string" && v.trim() !== "" && v.trim() !== props[k]) out[k] = v.trim();
+  }
+  return out;
+}
 
 // Why a property name can't be used, or null if it can. `others` are the other ACE property names.
 export function propNameError(v: string, others: string[]): string | null {
@@ -123,6 +147,7 @@ export function normalizeSettings(raw: unknown): AceSettings {
   else if (Array.isArray(r.intensities)) {
     list = cleanIntensities(r.intensities.filter((x): x is string => typeof x === "string"));
   }
+  const props = normalizeProps(r.props);
   return {
     atlasFolder: folderSetting(r.atlasFolder, d.atlasFolder),
     kindsFolder: folderSetting(r.kindsFolder, d.kindsFolder),
@@ -136,7 +161,8 @@ export function normalizeSettings(raw: unknown): AceSettings {
     logFormat: textSetting(r.logFormat, d.logFormat, false),
     dateFormat: textSetting(r.dateFormat, d.dateFormat, false),
     timeFormat: textSetting(r.timeFormat, d.timeFormat, false),
-    props: normalizeProps(r.props),
+    props,
+    renamedFrom: normalizeRenamedFrom(r.renamedFrom, props),
   };
 }
 

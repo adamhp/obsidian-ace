@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseKindConfig, linkTarget, linkList, addLink, cleanName, isTaken,
   isUnder, shouldMove, firstUrl, withFirst,
-  normalizeSettings, propNameError, folderSetting, DEFAULT_SETTINGS, parseIntensities, intensityError, fillTemplate,
+  normalizeSettings, propNameError, renameKey, folderSetting, DEFAULT_SETTINGS, parseIntensities, intensityError, fillTemplate,
 } from "../src/rules";
 
 describe("parseKindConfig", () => {
@@ -160,6 +160,19 @@ describe("settings", () => {
     expect(normalizeSettings({ props: { kind: "a:b" } }).props).toEqual(d);
     expect(normalizeSettings({ props: { kind: 7 } }).props).toEqual(d);
     expect(normalizeSettings({ props: "x" }).props).toEqual(d);
+  });
+  it("renameKey keeps position and never overwrites", () => {
+    const fm: Record<string, unknown> = { title: "A", kind: "[[Book]]", up: ["[[X]]"] };
+    expect(renameKey(fm, "kind", "type")).toBe("renamed");
+    expect(Object.entries(fm)).toEqual([["title", "A"], ["type", "[[Book]]"], ["up", ["[[X]]"]]]);
+    expect(renameKey(fm, "kind", "type")).toBe("absent");
+    const both = { kind: "a", type: "b" };
+    expect(renameKey(both, "kind", "type")).toBe("taken");
+    expect(both).toEqual({ kind: "a", type: "b" });
+  });
+  it("normalizeSettings renamedFrom", () => {
+    expect(normalizeSettings({}).renamedFrom).toEqual({});
+    expect(normalizeSettings({ props: { kind: "type" }, renamedFrom: { kind: "kind", up: "up", nope: "x", from: 3 } }).renamedFrom).toEqual({ kind: "kind" });
   });
   it("propNameError", () => {
     expect(propNameError(" ", [])).toBe("Enter a name.");

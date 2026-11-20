@@ -9,6 +9,7 @@ import {
 	fillTemplate,
 	linkTarget,
 	parseKindConfig,
+	renameKey,
 	shouldMove,
 	templatePath,
 } from "./rules";
@@ -105,6 +106,32 @@ export class Ace {
 		}
 		if (failed.length === 0) await this.app.fileManager.trashFile(file);
 		return { updated, failed };
+	}
+
+	notesWithProperty(name: string): TFile[] {
+		return this.app.vault
+			.getMarkdownFiles()
+			.filter((f) => Object.prototype.hasOwnProperty.call(this.fm(f), name));
+	}
+
+	// Renames a property in every note that has it. A note that already has the new name is skipped, never overwritten.
+	async renameProperty(from: string, to: string): Promise<{ renamed: number; skipped: string[]; failed: string[] }> {
+		let renamed = 0;
+		const skipped: string[] = [];
+		const failed: string[] = [];
+		for (const f of this.notesWithProperty(from)) {
+			try {
+				let result = "absent";
+				await this.app.fileManager.processFrontMatter(f, (fm: Record<string, unknown>) => {
+					result = renameKey(fm, from, to);
+				});
+				if (result === "renamed") renamed++;
+				else if (result === "taken") skipped.push(f.basename);
+			} catch {
+				failed.push(f.basename);
+			}
+		}
+		return { renamed, skipped, failed };
 	}
 
 	maps(): TFile[] {
