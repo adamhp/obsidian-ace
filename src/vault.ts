@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice, TFile, TFolder, moment, normalizePath } from "obsidian";
+import { App, MarkdownView, Notice, TFile, TFolder, Vault, moment, normalizePath } from "obsidian";
 import {
 	AceSettings,
 	KindConfig,
@@ -47,10 +47,22 @@ export class Ace {
 		return { ...k, folder: normalizePath(k.folder), template: k.template === null ? null : normalizePath(k.template) };
 	}
 
+	// Markdown notes in one folder, read from that folder instead of scanning the whole vault.
+	// With `deep`, notes in its subfolders are included too.
+	private notesIn(folder: string, deep = false): TFile[] {
+		const dir = this.app.vault.getFolderByPath(normalizePath(folder));
+		if (!dir) return [];
+		const out: TFile[] = [];
+		const add = (f: unknown) => {
+			if (f instanceof TFile && f.extension === "md") out.push(f);
+		};
+		if (deep) Vault.recurseChildren(dir, add);
+		else dir.children.forEach(add);
+		return out;
+	}
+
 	kinds(): KindConfig[] {
-		return this.app.vault
-			.getMarkdownFiles()
-			.filter((f) => f.parent?.path === this.settings.kindsFolder)
+		return this.notesIn(this.settings.kindsFolder)
 			.sort((a, b) => a.basename.localeCompare(b.basename))
 			.map((f) => this.withPaths(parseKindConfig(f.basename, this.fm(f), this.settings.defaultFolder)));
 	}
@@ -67,11 +79,7 @@ export class Ace {
 
 	kindFile(name: string): TFile | null {
 		const n = name.toLowerCase();
-		return (
-			this.app.vault
-				.getMarkdownFiles()
-				.find((f) => f.parent?.path === this.settings.kindsFolder && f.basename.toLowerCase() === n) ?? null
-		);
+		return this.notesIn(this.settings.kindsFolder).find((f) => f.basename.toLowerCase() === n) ?? null;
 	}
 
 	problemContext(): ProblemContext {
@@ -116,8 +124,7 @@ export class Ace {
 	// Old keys on Kind notes that have a value, with their current name and the Kind notes that carry them.
 	oldKindKeys(): { from: string; to: string; files: TFile[] }[] {
 		const out = new Map<string, { from: string; to: string; files: TFile[] }>();
-		for (const f of this.app.vault.getMarkdownFiles()) {
-			if (f.parent?.path !== this.settings.kindsFolder) continue;
+		for (const f of this.notesIn(this.settings.kindsFolder)) {
 			for (const [key, value] of Object.entries(this.fm(f))) {
 				const to = oldKindKey(key);
 				if (to === null || isEmptyValue(value)) continue;
@@ -180,9 +187,7 @@ export class Ace {
 
 	maps(): TFile[] {
 		const folder = this.kind("Map")?.folder ?? this.settings.mapsFolder;
-		return this.app.vault
-			.getMarkdownFiles()
-			.filter((f) => f.path.startsWith(folder + "/"))
+		return this.notesIn(folder, true)
 			.sort((a, b) => a.basename.localeCompare(b.basename));
 	}
 
