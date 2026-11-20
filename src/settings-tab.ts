@@ -219,7 +219,7 @@ export class AceSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				const details = setting.descEl.createEl("details", { cls: "ace-about" });
 				details.open = this.aboutOpen;
-				details.createEl("summary", { text: "How LYT and ACE work, and how this plugin implements them" });
+				details.createEl("summary", { text: "How LYT and ACE work, how this plugin uses them, and the field syntax" });
 				details.addEventListener("toggle", () => (this.aboutOpen = details.open));
 				const owner = new Component();
 				owner.load();
