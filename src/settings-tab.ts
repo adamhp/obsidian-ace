@@ -1,11 +1,10 @@
-import { App, ButtonComponent, Component, MarkdownRenderer, Notice, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFile, normalizePath } from "obsidian";
+import { App, ButtonComponent, Notice, PluginSettingTab, Setting, SettingDefinition, SettingDefinitionItem, TFile, normalizePath } from "obsidian";
 import type AcePlugin from "./main";
 import type { Ace } from "./vault";
 import { AceSettings, DEFAULT_SETTINGS, PROP_KEYS, PropKey, cleanName, folderSetting, intensityError, isTaken, propNameError, textSetting } from "./rules";
 import { ask, confirm, confirmTyped } from "./ui";
 import { KindEditorModal } from "./kind-editor";
 import { draftFromFrontmatter, kindProblems } from "./kinds";
-import { aboutMarkdown } from "./about";
 import { STARTER_KINDS } from "./starter";
 
 type FolderKey = "atlasFolder" | "kindsFolder" | "mapsFolder" | "defaultFolder" | "sourcesFolder" | "effortsFolder";
@@ -34,8 +33,6 @@ const PROP_DESCS: Record<PropKey, string> = {
 };
 
 export class AceSettingTab extends PluginSettingTab {
-	// Kept so the guide stays open when the tab redraws.
-	private aboutOpen = false;
 	private missingAnchor: HTMLElement | null = null;
 	private missingEl: HTMLElement | null = null;
 	private renameWarnEl: HTMLElement | null = null;
@@ -286,23 +283,6 @@ export class AceSettingTab extends PluginSettingTab {
 		this.update();
 	}
 
-	private about(): SettingDefinition {
-		return {
-			name: "About ACE",
-			aliases: ["readme", "help", "guide", "LYT"],
-			render: (setting) => {
-				const details = setting.descEl.createEl("details", { cls: "ace-about" });
-				details.open = this.aboutOpen;
-				details.createEl("summary", { text: "How LYT and ACE work, how this plugin uses them, and the field syntax" });
-				details.addEventListener("toggle", () => (this.aboutOpen = details.open));
-				const owner = new Component();
-				owner.load();
-				void MarkdownRenderer.render(this.app, aboutMarkdown(this.s), details.createDiv(), "", owner);
-				return () => owner.unload();
-			},
-		};
-	}
-
 	// Asks, then removes old keys from Kind notes that already have the new key. Returns the result line, or null if cancelled.
 	private async removeOldKeys(items: { from: string; to: string; files: TFile[] }[]): Promise<string | null> {
 		const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
@@ -510,7 +490,6 @@ export class AceSettingTab extends PluginSettingTab {
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		return [
-			this.about(),
 			this.folder("atlasFolder", "Atlas folder", "Where your notes live. New Map lists notes in this folder."),
 			this.folder("kindsFolder", "Kinds folder", "Kind notes live here."),
 			this.folder("mapsFolder", "Maps folder", "Used when no Map kind exists, and for the Map kind note the plugin creates."),

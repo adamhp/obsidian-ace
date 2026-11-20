@@ -282,9 +282,6 @@ Open Settings, then ACE Actions. Change one thing at a time and put it back afte
 - [ ] Change Time format to "HH:mm:ss", run Log in an Effort. Expect the time stamp to show seconds. Then change it back to "HH:mm".
 - [ ] Open [[Plugin for daily review]], run Make effort and pick the first intensity. Expect a new Effort in Efforts, an effort link on the Idea, and its status unchanged.
 
-## About ACE
-- [ ] Open Settings, then ACE Actions. Expect "About ACE" as the first row, collapsed. Click the line under it: expect the guide (LYT, ACE, how the plugin works, field syntax, reserved names). Edit any Kind and save: expect the guide to stay open.
-
 ## Old Kind note keys
 Three seeded Kind notes carry old keys: Widget (\`default_up\`), Sketch (\`default_up\` and \`default_status\`), Relic (\`default_up\` and \`default_map\` together, plus an empty \`default_colour\`).
 - [ ] In Settings, Kinds, expect a ⚠ on Widget, Sketch and Relic. Edit Widget: expect the Problems line "default_up is an old key. Rename it to default_map." with a Rename button. Cancel.
@@ -303,7 +300,6 @@ Open Settings, then ACE Actions, then Property names. Put every name back at the
 - [ ] Open [[Idempotency]]: expect \`type: [[Concept]]\` in the place \`kind\` was. Open [[Inbox/Has type already]]: expect both \`kind\` and \`type: draft\` unchanged.
 - [ ] Press Check notes, then Remove all old in the Danger zone at the bottom of the window. Expect a window "Delete all old properties?" saying kind is deleted from 13 notes and that all of them also have type. Expect the Delete button to stay off until you type yes. Press Cancel first and check nothing changed. Then do it: expect "Deleted kind from 13 notes", the warning under Check notes to go, and [[Inbox/Has type already]] to have only \`type\`.
 - [ ] Edit any Kind and press Add field (or New field): type \`type\`. Expect "ACE writes type itself." Type \`kind\`: expect it to be allowed. Cancel.
-- [ ] Open the About ACE guide. Expect "A note's \`type\` property" and \`type\` first in the reserved names.
 - [ ] Change Map property to \`type\` too. Expect a notice that the name is already used and that it is still using \`up\`.
 - [ ] Change Map property to \`parent\`. Open [[Inbox/Meeting notes]], run Add to Map, pick Software. Expect \`parent: ["[[Software]]"]\`. Run New Map, name it "Parents": expect its view to still work for notes that use \`parent\`.
 - [ ] Put it back: clear Kind property and Map property (blank means the default). Press Check notes: expect type becomes kind and parent becomes up. Press Rename. Expect "Has type already" listed as not renamed again. Open [[Idempotency]]: expect \`kind\` back.
