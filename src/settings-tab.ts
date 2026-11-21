@@ -44,13 +44,27 @@ export class AceSettingTab extends PluginSettingTab {
 		private ace: Ace,
 	) {
 		super(app, plugin);
-		// Refresh the Kinds list once the cache catches up after a Save or New kind.
+		// Obsidian stores the definitions when the tab is added, before the vault has loaded,
+		// and does not ask for them again when the tab opens. So the Kinds list is rebuilt here:
+		// once the vault is ready, and whenever a Kind note is added, edited, moved or deleted.
+		const inKinds = (path?: string) => path === this.s.kindsFolder;
+		this.app.workspace.onLayoutReady(() => this.update());
 		this.plugin.registerEvent(
 			this.app.metadataCache.on("changed", (file) => {
-				if (!this.containerEl.isShown()) return;
-				if (file.parent?.path === this.s.kindsFolder) this.update();
+				if (inKinds(file.parent?.path)) this.update();
 				// A rename by Check notes lands in the cache note by note; keep the warning's counts in step.
-				else this.refreshRenameWarning();
+				else if (this.containerEl.isShown()) this.refreshRenameWarning();
+			}),
+		);
+		this.plugin.registerEvent(
+			this.app.metadataCache.on("deleted", (file) => {
+				if (inKinds(file.parent?.path)) this.update();
+			}),
+		);
+		this.plugin.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				const oldParent = oldPath.includes("/") ? oldPath.slice(0, oldPath.lastIndexOf("/")) : "/";
+				if (inKinds(file.parent?.path) || inKinds(oldParent)) this.update();
 			}),
 		);
 	}
