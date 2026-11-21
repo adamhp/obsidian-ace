@@ -1,6 +1,6 @@
 {
   "name": "ace-actions",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Create typed notes, link them to Maps, file them by kind, and start Efforts, following the ACE folder framework.",
   "license": "MIT",
   "main": "main.js",
