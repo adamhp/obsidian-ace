@@ -184,6 +184,19 @@ class ValueModal extends Modal {
 	}
 }
 
+// Picker choices with the "none" entry on top, so it is the pick when nothing is typed.
+// A configured default, when present among the names, still comes before it.
+export function noneFirst(
+	names: string[],
+	preferred: string | null,
+	noneLabel: string,
+): { label: string; value: string | null }[] {
+	const none = { label: noneLabel, value: null };
+	const ordered = withFirst(names, preferred).map((n) => ({ label: n, value: n }));
+	if (preferred !== null && names.includes(preferred)) return [ordered[0], none, ...ordered.slice(1)];
+	return [none, ...ordered];
+}
+
 export async function askValue(
 	app: App,
 	title: string,
@@ -192,9 +205,7 @@ export async function askValue(
 	options?: string[],
 ): Promise<{ value: unknown } | null> {
 	if (options && options.length > 0) {
-		const names = withFirst(options, typeof initial === "string" && initial !== "" ? initial : null);
-		const items: { label: string; value: string | null }[] = names.map((n) => ({ label: n, value: n }));
-		items.push({ label: "(none)", value: null });
+		const items = noneFirst(options, typeof initial === "string" && initial !== "" ? initial : null, "(none)");
 		const chosen = await pick(app, items, (i) => i.label, title);
 		if (chosen === null) return null;
 		if (chosen.value === null) return { value: null };

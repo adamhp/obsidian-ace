@@ -1,7 +1,7 @@
 import { Notice, TFile } from "obsidian";
 import { Ace } from "../vault";
-import { ask, askValue, pick } from "../ui";
-import { KindConfig, cleanName, isTaken, withFirst } from "../rules";
+import { ask, askValue, noneFirst, pick } from "../ui";
+import { KindConfig, cleanName, isTaken } from "../rules";
 import { fillTitle, isEmptyValue, propType } from "../kinds";
 
 interface Choice<T> {
@@ -31,12 +31,8 @@ export async function askKindDetails(
 	exclude?: TFile,
 ): Promise<KindDetails | null> {
 	// Map
-	const mapNames = withFirst(
-		ace.maps().filter((f) => f !== exclude).map((f) => f.basename),
-		kind.defaultUp,
-	);
-	const mapChoices: Choice<string | null>[] = mapNames.map((n) => ({ label: n, value: n }));
-	mapChoices.push({ label: "(no Map)", value: null });
+	const mapNames = ace.maps().filter((f) => f !== exclude).map((f) => f.basename);
+	const mapChoices: Choice<string | null>[] = noneFirst(mapNames, kind.defaultUp, "(no Map)");
 	const mapPick = await choose(ace, mapChoices, `Map for "${noteName}"`);
 	if (mapPick === null) return null;
 
